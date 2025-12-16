@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildMessageResponse } from "@/lib/pipeline/build-response";
+import { buildMessageResponse } from "@/lib/messageIngest/build-response";
 import type {
   Address,
   ExtractedData,

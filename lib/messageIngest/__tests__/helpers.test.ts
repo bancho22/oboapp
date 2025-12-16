@@ -7,7 +7,10 @@ vi.mock("@/lib/firebase-admin", () => ({
   },
 }));
 
-import { validateMessageText, verifyAuthToken } from "@/lib/pipeline/helpers";
+import {
+  validateMessageText,
+  verifyAuthToken,
+} from "@/lib/messageIngest/helpers";
 import { adminAuth } from "@/lib/firebase-admin";
 
 describe(validateMessageText, () => {

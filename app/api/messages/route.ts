@@ -2,19 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { Message } from "@/lib/types";
 import {
-  extractAddressesFromMessage,
-  geocodeAddressesFromExtractedData,
-  convertMessageGeocodingToGeoJson,
   verifyAuthToken,
   validateMessageText,
-  buildMessageResponse,
-} from "@/lib/pipeline";
-import {
-  storeIncomingMessage,
-  storeAddressesInMessage,
-  storeGeocodingInMessage,
-  storeGeoJsonInMessage,
-} from "@/lib/pipeline/db";
+  messageIngest,
+} from "@/lib/messageIngest";
+
+const INGEST_SOURCE = "web-interface";
 
 function convertTimestamp(timestamp: any): string {
   // Handle Firestore Timestamp from Admin SDK
@@ -70,38 +63,11 @@ export async function POST(request: NextRequest) {
     validateMessageText(text);
 
     // Execute the pipeline
-    // Step 1: Store incoming message
-    const messageId = await storeIncomingMessage(text, userId, userEmail);
-
-    // Step 2: Extract addresses from message
-    const extractedData = await extractAddressesFromMessage(text);
-
-    // Step 3: Store extracted addresses in message
-    await storeAddressesInMessage(messageId, extractedData);
-
-    // Step 4: Geocode addresses
-    const { preGeocodedMap, addresses } =
-      await geocodeAddressesFromExtractedData(extractedData);
-
-    // Step 5: Store geocoding results in message
-    await storeGeocodingInMessage(messageId, addresses);
-
-    // Step 6: Convert to GeoJSON
-    const geoJson = await convertMessageGeocodingToGeoJson(
-      extractedData,
-      preGeocodedMap
-    );
-
-    // Step 7: Store GeoJSON in message
-    await storeGeoJsonInMessage(messageId, geoJson);
-
-    // Build and return response
-    const newMessage = await buildMessageResponse(
-      messageId,
+    const newMessage = await messageIngest(
       text,
-      addresses,
-      extractedData,
-      geoJson
+      INGEST_SOURCE,
+      userId,
+      userEmail
     );
 
     return NextResponse.json({ message: newMessage }, { status: 201 });

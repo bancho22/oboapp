@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   findMissingStreetEndpoints,
   collectAllAddressesFromExtractedData,
-} from "@/lib/pipeline/geocode-addresses";
+} from "@/lib/messageIngest/geocode-addresses";
 import type { StreetSection, ExtractedData } from "@/lib/types";
 
 describe(findMissingStreetEndpoints, () => {

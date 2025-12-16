@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateAllAddressesGeocoded } from "@/lib/pipeline/convert-to-geojson";
+import { validateAllAddressesGeocoded } from "@/lib/messageIngest/convert-to-geojson";
 import type { ExtractedData } from "@/lib/types";
 
 describe(validateAllAddressesGeocoded, () => {
