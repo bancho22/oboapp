@@ -1,4 +1,9 @@
-import { Message } from "../types";
+import {
+  Address,
+  ExtractedData,
+  GeoJSONFeatureCollection,
+  Message,
+} from "../types";
 import {
   storeIncomingMessage,
   storeAddressesInMessage,
@@ -15,6 +20,14 @@ export { convertMessageGeocodingToGeoJson } from "./convert-to-geojson";
 export { verifyAuthToken, validateMessageText } from "./helpers";
 export { buildMessageResponse } from "./build-response";
 
+export interface MessageIngestOptions {
+  /**
+   * Provide ready GeoJSON geometry to skip AI extraction + geocoding.
+   * Used by crawlers or integrations with pre-geocoded data.
+   */
+  precomputedGeoJson?: GeoJSONFeatureCollection | null;
+}
+
 /**
  * Execute the full message ingest pipeline
  * @param text - The message text to process
@@ -27,39 +40,52 @@ export async function messageIngest(
   text: string,
   source: string,
   userId: string,
-  userEmail: string | null
+  userEmail: string | null,
+  options: MessageIngestOptions = {}
 ): Promise<Message> {
   // Step 1: Store incoming message
   const messageId = await storeIncomingMessage(text, userId, userEmail, source);
 
-  // Step 2: Extract addresses from message
-  const { extractAddressesFromMessage } = await import("./extract-addresses");
-  const extractedData = await extractAddressesFromMessage(text);
+  const hasPrecomputedGeoJson = Boolean(options.precomputedGeoJson);
+  let extractedData: ExtractedData | null = null;
+  let addresses: Address[] = [];
+  let geoJson: GeoJSONFeatureCollection | null =
+    options.precomputedGeoJson ?? null;
 
-  // Step 3: Store extracted addresses in message
-  await storeAddressesInMessage(messageId, extractedData);
+  if (hasPrecomputedGeoJson) {
+    console.log(
+      "ℹ️  Skipping AI extraction and geocoding: using provided GeoJSON geometry."
+    );
+  } else {
+    // Step 2: Extract addresses from message
+    const { extractAddressesFromMessage } = await import("./extract-addresses");
+    extractedData = await extractAddressesFromMessage(text);
 
-  // Step 4: Geocode addresses
-  const { geocodeAddressesFromExtractedData } = await import(
-    "./geocode-addresses"
-  );
-  const { preGeocodedMap, addresses } = await geocodeAddressesFromExtractedData(
-    extractedData
-  );
+    // Step 3: Store extracted addresses in message
+    await storeAddressesInMessage(messageId, extractedData);
 
-  // Step 5: Store geocoding results in message
-  await storeGeocodingInMessage(messageId, addresses);
+    // Step 4: Geocode addresses
+    const { geocodeAddressesFromExtractedData } = await import(
+      "./geocode-addresses"
+    );
+    const { preGeocodedMap, addresses: geocodedAddresses } =
+      await geocodeAddressesFromExtractedData(extractedData);
+    addresses = geocodedAddresses;
 
-  // Step 6: Convert to GeoJSON
-  const { convertMessageGeocodingToGeoJson } = await import(
-    "./convert-to-geojson"
-  );
-  const geoJson = await convertMessageGeocodingToGeoJson(
-    extractedData,
-    preGeocodedMap
-  );
+    // Step 5: Store geocoding results in message
+    await storeGeocodingInMessage(messageId, addresses);
 
-  // Step 7: Store GeoJSON in message
+    // Step 6: Convert to GeoJSON
+    const { convertMessageGeocodingToGeoJson } = await import(
+      "./convert-to-geojson"
+    );
+    geoJson = await convertMessageGeocodingToGeoJson(
+      extractedData,
+      preGeocodedMap
+    );
+  }
+
+  // Step 7: Store GeoJSON in message (either generated or provided)
   await storeGeoJsonInMessage(messageId, geoJson);
 
   // Build and return response

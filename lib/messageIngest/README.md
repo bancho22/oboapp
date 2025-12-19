@@ -8,6 +8,12 @@ This directory contains the message ingest pipeline that extracts addresses from
 import { messageIngest } from "@/lib/messageIngest";
 
 const message = await messageIngest(text, "web-interface", userId, userEmail);
+
+// If you already have GeoJSON (e.g., from a crawler), provide it to skip AI/geocoding:
+const precomputed = await fetchGeoJsonFromSource();
+await messageIngest(text, "sofiyska-voda", userId, userEmail, {
+  precomputedGeoJson: precomputed,
+});
 ```
 
 ## Pipeline Flow
