@@ -33,11 +33,6 @@ export async function geocodeAddress(address: string): Promise<Address | null> {
 
         // Validate that the result is actually within Sofia
         if (isWithinSofia(lat, lng)) {
-          console.log(
-            `✅ Geocoded "${address}" within Sofia: [${lat.toFixed(
-              6
-            )}, ${lng.toFixed(6)}]`
-          );
           return {
             originalText: address,
             formattedAddress: result.formatted_address,

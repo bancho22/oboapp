@@ -53,20 +53,28 @@ Single **point locations** where work or an event takes place.
 
 Rules:
 
-- Must contain a street name **and a street number**
+- **CRITICAL**: Must contain a street name **and a street number**
+- **DO NOT** use pins for street names without numbers
 - Represents a single exact address
 - Use ONLY when there is **no street section defined by two different points**
 - Do NOT include addresses that appear in `streets.from` or `streets.to`
 
-Example:
+**Valid pins** (have street numbers):
 
 ```json
 {"address": "ul. \"Georgi Benkovski'\" 26, Sofia, Bulgaria", "timespan": []}
 {"address": "ul. \"Random Street Name'\" 18, Sofia, Bulgaria", "timespan": []}
 {"address": "ul. Oborishte 102, Sofia, Bulgaria", "timespans": []}
-{"address": "ul. Bunaya 10, Sofia, Bulgaria", "timespans": []}
-{"address": "bul. Ispania 10, Sofia, Bulgaria", "timespans": []}
+{"address": "bul. Shipcheski prohod 40, Sofia, Bulgaria", "timespans": []}
 ```
+
+**Invalid pins** (DO NOT extract these):
+
+- ❌ `{"address": "bul. Shipcheski prohod, Sofia, Bulgaria"}` - No street number
+- ❌ `{"address": "ul. Ivan Dimitrov – Kuklata, Sofia, Bulgaria"}` - No street number
+- ❌ `{"address": "bul. Vasil Levski, Sofia, Bulgaria"}` - No street number
+
+If a street name is mentioned WITHOUT a number, it should NOT be in `pins`.
 
 ---
 

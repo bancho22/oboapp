@@ -128,6 +128,14 @@ async function ingestSource(
     return false;
   }
 
+  // Prominent message header
+  console.log(`\n${"=".repeat(80)}`);
+  console.log(`📄 PROCESSING MESSAGE`);
+  console.log(`   Title: ${source.title}`);
+  console.log(`   URL: ${source.url}`);
+  console.log(`   Source Type: ${source.sourceType}`);
+  console.log(`${"=".repeat(80)}`);
+
   // Parse geoJson if it's a string
   let geoJson: GeoJSONFeatureCollection | null = null;
   if (source.geoJson) {
@@ -142,7 +150,7 @@ async function ingestSource(
   const { messageIngest } = await import("./index");
 
   // Use the sourceType as the source identifier for messageIngest
-  await messageIngest(
+  const message = await messageIngest(
     source.message,
     source.sourceType,
     SYSTEM_USER_ID,
@@ -154,7 +162,9 @@ async function ingestSource(
     }
   );
 
-  console.log(`   ✅ Ingested: ${source.title}`);
+  console.log(`\n✅ COMPLETED: ${source.title}`);
+  console.log(`   Message ID: ${message.id}`);
+  console.log(`${"=".repeat(80)}\n`);
   return true;
 }
 

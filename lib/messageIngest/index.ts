@@ -17,6 +17,7 @@ export {
   type GeocodingResult,
 } from "./geocode-addresses";
 export { convertMessageGeocodingToGeoJson } from "./convert-to-geojson";
+export { filterOutlierCoordinates } from "./filter-outliers";
 export { verifyAuthToken, validateMessageText } from "./helpers";
 export { buildMessageResponse } from "./build-response";
 
@@ -81,7 +82,18 @@ export async function messageIngest(
     );
     const { preGeocodedMap, addresses: geocodedAddresses } =
       await geocodeAddressesFromExtractedData(extractedData);
-    addresses = geocodedAddresses;
+
+    // Step 4.5: Filter outlier coordinates
+    const { filterOutlierCoordinates } = await import("./filter-outliers");
+    addresses = filterOutlierCoordinates(geocodedAddresses);
+
+    // Update preGeocodedMap to remove filtered outliers
+    const filteredOriginalTexts = new Set(addresses.map((a) => a.originalText));
+    for (const [key] of preGeocodedMap) {
+      if (!filteredOriginalTexts.has(key)) {
+        preGeocodedMap.delete(key);
+      }
+    }
 
     // Step 5: Store geocoding results in message
     await storeGeocodingInMessage(messageId, addresses);

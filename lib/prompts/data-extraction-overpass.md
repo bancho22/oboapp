@@ -61,18 +61,31 @@ Each object:
 
 Rules:
 
-- Use pins for exact addresses with street numbers
-- Keep original Cyrillic street names
+- **CRITICAL**: Use pins ONLY for addresses with a specific street NUMBER
+- **DO NOT** use pins for street names without numbers
+- Keep original Cyrillic street names BUT remove decorative quotes
 - **DO NOT** add ", София" suffix - just the street and number
+- **DO NOT** include „ " or other quote marks around street names
 - Format: `<street type> <street name> <number>`
 
-Examples:
+**Valid pins** (have street numbers):
 
 ```json
 {"address": "ул. Оборище 102", "timespans": []}
 {"address": "бул. Евлоги Георгиев 15", "timespans": []}
 {"address": "ул. Цар Симеон 26", "timespans": []}
+{"address": "бул. Шипченски проход 40", "timespans": []}
 ```
+
+Note: Street names should NOT have decorative quotes („ ").
+
+**Invalid pins** (DO NOT extract these):
+
+- ❌ `{"address": "бул. Шипченски проход"}` - No street number
+- ❌ `{"address": "ул. Иван Димитров – Куклата"}` - No street number
+- ❌ `{"address": "бул. Васил Левски"}` - No street number
+
+IMPORTANT: If a street name is mentioned WITHOUT a number, it should NOT be in `pins`. Only use it in `streets` if it's part of a section definition.
 
 ---
 
@@ -94,14 +107,26 @@ Each object:
 Rules:
 
 1. Use `streets` ONLY when TWO DIFFERENT locations define a section
-2. Keep original Cyrillic street names
+2. Keep original Cyrillic street names BUT remove decorative quotes
 3. **IMPORTANT**: For intersections, use ONLY the crossing street name (without the main street name)
 4. **DO NOT** add ", София" suffix
 5. **DO NOT** use " и " format - just the street name
+6. **DO NOT** include „ " or other quote marks around street names
+7. **CRITICAL**: Do NOT extract street sections if the endpoint is a generic term or direction
 
-Examples:
+**Invalid endpoints to REJECT:**
 
-**Text:** "бул. Витоша от кръстовището с ул. Раковска до това с бул. Патриарх Евтимий"
+- "маршрута" (the route)
+- "края" (the end)
+- "началото" (the beginning)
+- "посоката" (the direction)
+- Generic directional terms that don't specify an actual location
+
+If the endpoint is not a specific street name, street number, or intersection, DO NOT create a `streets` entry.
+
+Examples (NOTE: Do NOT include decorative quotes „ " in the extracted values):
+
+**Text:** "бул. „Витоша" от кръстовището с ул. „Раковска" до това с бул. „Патриарх Евтимий""
 
 ```json
 {
@@ -112,7 +137,7 @@ Examples:
 }
 ```
 
-**Text:** "ул. Оборище от №15 до ул. Раковска"
+**Text:** "ул. „Оборище" от №15 до ул. „Раковска""
 
 ```json
 {
@@ -133,6 +158,11 @@ Examples:
   "timespans": []
 }
 ```
+
+**Text:** "бул. 'Васил Левски' от бул. 'Княз Александър Дондуков' до маршрута"
+
+- **INVALID** - "маршрута" is not a specific location
+- Do NOT extract this as a street section
 
 ---
 

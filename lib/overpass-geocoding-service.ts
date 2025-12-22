@@ -22,6 +22,21 @@ const OVERPASS_INSTANCES = [
 ];
 
 /**
+ * Normalize street name for better OSM matching
+ * - Removes street type prefixes (бул., ул., площад, пл.)
+ * - Removes all quote styles (ASCII and Unicode)
+ * - Normalizes whitespace
+ */
+function normalizeStreetName(streetName: string): string {
+  return streetName
+    .toLowerCase()
+    .replaceAll(/^(бул\.|ул\.|площад|пл\.)\s*/g, "")
+    .replaceAll(/["""„"'`''‚«»‹›]/g, "") // Remove ALL quote styles
+    .replaceAll(/\s+/g, " ") // Normalize whitespace
+    .trim();
+}
+
+/**
  * Get street geometry from Overpass API (OpenStreetMap)
  * Returns actual LineString geometries from OSM, preserving way structure
  */
@@ -29,29 +44,51 @@ async function getStreetGeometryFromOverpass(
   streetName: string
 ): Promise<Feature<MultiLineString> | null> {
   try {
-    // Normalize street name - remove prefixes for OSM search
-    const normalizedName = streetName
-      .toLowerCase()
-      .replaceAll(/^(бул\.|ул\.)\s*/g, "")
-      .trim();
+    // Normalize street name for better OSM matching
+    const normalizedName = normalizeStreetName(streetName);
+
+    // Check if this is a square/plaza (площад/пл.)
+    const isSquare = streetName.toLowerCase().match(/^(площад|пл\.)\s*/);
 
     // Overpass QL query to find the street by name
+    // For squares, search for place=square nodes/areas
     // For streets (ул.), include residential roads in addition to main highways
     const isStreet = streetName.toLowerCase().includes("ул.");
-    const highwayFilter = isStreet
-      ? '["highway"~"^(primary|secondary|tertiary|trunk|residential|unclassified|living_street)$"]'
-      : '["highway"~"^(primary|secondary|tertiary|trunk)$"]';
 
-    const query = `
-      [out:json][timeout:25];
-      (
-        way${highwayFilter}["name"~"${normalizedName}",i](${SOFIA_BBOX});
-        way${highwayFilter}["name:bg"~"${normalizedName}",i](${SOFIA_BBOX});
-      );
-      out geom;
-    `;
+    let query: string;
 
-    console.log(`   Querying Overpass API for: ${streetName}`);
+    if (isSquare) {
+      // Search for squares as nodes or ways with place=square
+      query = `
+        [out:json][timeout:25];
+        (
+          node["place"="square"]["name"~"${normalizedName}",i](${SOFIA_BBOX});
+          way["place"="square"]["name"~"${normalizedName}",i](${SOFIA_BBOX});
+          node["place"="square"]["name:bg"~"${normalizedName}",i](${SOFIA_BBOX});
+          way["place"="square"]["name:bg"~"${normalizedName}",i](${SOFIA_BBOX});
+        );
+        out geom;
+      `;
+    } else {
+      // Search for streets/boulevards
+      const highwayFilter = isStreet
+        ? '["highway"~"^(primary|secondary|tertiary|trunk|residential|unclassified|living_street)$"]'
+        : '["highway"~"^(primary|secondary|tertiary|trunk)$"]';
+
+      // Use fuzzy matching with regex contains instead of exact match
+      query = `
+        [out:json][timeout:25];
+        (
+          way${highwayFilter}["name"~"${normalizedName}",i](${SOFIA_BBOX});
+          way${highwayFilter}["name:bg"~"${normalizedName}",i](${SOFIA_BBOX});
+        );
+        out geom;
+      `;
+    }
+
+    console.log(
+      `   Querying Overpass for: "${streetName}" → normalized: "${normalizedName}"`
+    );
 
     // Try each Overpass instance until one works
     let responseData: any = null;
@@ -88,18 +125,30 @@ async function getStreetGeometryFromOverpass(
     }
 
     if (!responseData.elements || responseData.elements.length === 0) {
-      console.warn(`   No OSM ways found for: ${streetName}`);
+      // No OSM ways found - API request succeeded but no data for this street name
+      console.log(`   ℹ️  No OSM ways/nodes found for: "${streetName}"`);
       return null;
     }
 
-    console.log(`   Found ${responseData.elements.length} OSM way(s)`);
+    console.log(`   Found ${responseData.elements.length} OSM element(s)`);
 
     // Build MultiLineString with each OSM way as a separate LineString
+    // For squares (nodes), create a small point geometry
     const lineStrings: Position[][] = [];
     let totalPoints = 0;
 
     for (const element of responseData.elements) {
-      if (
+      if (element.type === "node") {
+        // Square represented as a point - create a small box around it
+        const lat = element.lat;
+        const lon = element.lon;
+        const offset = 0.0001; // ~10 meters
+        lineStrings.push([
+          [lon - offset, lat - offset],
+          [lon + offset, lat + offset],
+        ]);
+        totalPoints += 2;
+      } else if (
         element.type === "way" &&
         element.geometry &&
         element.geometry.length >= 2
@@ -115,7 +164,9 @@ async function getStreetGeometryFromOverpass(
     }
 
     if (lineStrings.length === 0) {
-      console.warn(`   No valid geometries found for: ${streetName}`);
+      console.log(
+        `   ℹ️  No valid geometries in response for: "${streetName}"`
+      );
       return null;
     }
 
@@ -280,7 +331,6 @@ export async function overpassGeocodeIntersections(
 
   for (let i = 0; i < intersections.length; i++) {
     const intersection = intersections[i];
-    console.log(`\n📍 Testing: ${intersection}`);
 
     const [street1Name, street2Name] = intersection
       .split("∩")
@@ -291,15 +341,13 @@ export async function overpassGeocodeIntersections(
       continue;
     }
 
-    console.log(`🔍 Finding intersection: ${street1Name} ∩ ${street2Name}`);
-
     try {
       // Fetch geometries from Overpass
       const geom1 = await getStreetGeometryFromOverpass(street1Name);
       const geom2 = await getStreetGeometryFromOverpass(street2Name);
 
       if (!geom1 || !geom2) {
-        console.error(`   Could not fetch geometries for intersection`);
+        console.log(`   ℹ️  Missing geometry - cannot calculate intersection`);
         continue;
       }
 
