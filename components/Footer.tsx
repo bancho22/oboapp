@@ -54,16 +54,15 @@ export default function Footer() {
         {/* Footer Text */}
         <div className="mt-8 pt-6 border-t border-gray-300 text-center text-sm text-gray-600">
           <p>
-            Разработено в Оборище с ❤️ за Оборище. Виж{" "}
             <a
               href="https://github.com/vbuch/oborishte-map"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[#5DADE2] hover:underline"
             >
-              отворения код в GitHub
+              Отворен код
             </a>
-            .
+            , разработен в Оборище с ❤️ за Оборище.
           </p>
         </div>
       </div>
