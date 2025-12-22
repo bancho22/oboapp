@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import sources from "@/lib/sources.json";
+import DetailItem from "./DetailItem";
 
 interface SourceProps {
   sourceId: string;
@@ -71,8 +72,7 @@ export default function SourceDisplay({ sourceId, sourceUrl }: SourceProps) {
   );
 
   return (
-    <div>
-      <h3 className="text-sm font-medium text-gray-500 mb-1">Източник</h3>
+    <DetailItem title="Източник">
       <div className="flex items-center space-x-2">
         {isValidUrl ? (
           <a
@@ -88,6 +88,6 @@ export default function SourceDisplay({ sourceId, sourceUrl }: SourceProps) {
           content
         )}
       </div>
-    </div>
+    </DetailItem>
   );
 }

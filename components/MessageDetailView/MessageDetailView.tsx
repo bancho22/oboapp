@@ -7,6 +7,7 @@ import Header from "./Header";
 import SourceDisplay from "./Source";
 import Locations from "./Locations";
 import Addresses from "./Addresses";
+import DetailItem from "./DetailItem";
 
 interface MessageDetailViewProps {
   readonly message: Message | null;
@@ -96,12 +97,11 @@ export default function MessageDetailView({
             isVisible ? "opacity-100" : "opacity-0"
           }`}
         >
-          <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">Подаден</h3>
+          <DetailItem title="Подаден">
             <p className="text-base text-gray-900">
               {formatDate(message.createdAt)}
             </p>
-          </div>
+          </DetailItem>
 
           {message.source && (
             <SourceDisplay
@@ -110,22 +110,18 @@ export default function MessageDetailView({
             />
           )}
 
-          <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">Текст</h3>
+          <DetailItem title="Текст">
             <p className="text-base text-gray-900 whitespace-pre-wrap">
               {message.text}
             </p>
-          </div>
+          </DetailItem>
 
           {message.extractedData?.responsible_entity && (
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">
-                Отговорна институция
-              </h3>
+            <DetailItem title="Отговорна институция">
               <p className="text-base text-gray-900">
                 {message.extractedData.responsible_entity}
               </p>
-            </div>
+            </DetailItem>
           )}
 
           <Locations
@@ -140,16 +136,13 @@ export default function MessageDetailView({
           />
 
           {message.geoJson?.features && (
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">
-                Обекти на картата
-              </h3>
+            <DetailItem title="Обекти на картата">
               <p className="text-sm text-gray-900">
                 {message.geoJson.features.length}{" "}
                 {message.geoJson.features.length === 1 ? "обект" : "обекта"} на
                 картата
               </p>
-            </div>
+            </DetailItem>
           )}
         </div>
       </aside>

@@ -1,5 +1,6 @@
 import React from "react";
 import type { Pin, StreetSection } from "@/lib/types";
+import DetailItem from "./DetailItem";
 
 interface LocationsProps {
   pins?: Pin[] | null;
@@ -10,8 +11,7 @@ export default function Locations({ pins, streets }: LocationsProps) {
   return (
     <>
       {pins && pins.length > 0 && (
-        <div>
-          <h3 className="text-sm font-medium text-gray-500 mb-2">Локации</h3>
+        <DetailItem title="Локации">
           <div className="space-y-3">
             {pins.map((pin, index) => (
               <div
@@ -35,14 +35,11 @@ export default function Locations({ pins, streets }: LocationsProps) {
               </div>
             ))}
           </div>
-        </div>
+        </DetailItem>
       )}
 
       {streets && streets.length > 0 && (
-        <div>
-          <h3 className="text-sm font-medium text-gray-500 mb-2">
-            Улични участъци
-          </h3>
+        <DetailItem title="Улични участъци">
           <div className="space-y-3">
             {streets.map((street, index) => (
               <div
@@ -69,7 +66,7 @@ export default function Locations({ pins, streets }: LocationsProps) {
               </div>
             ))}
           </div>
-        </div>
+        </DetailItem>
       )}
     </>
   );

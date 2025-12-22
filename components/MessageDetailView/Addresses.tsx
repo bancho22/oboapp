@@ -1,5 +1,6 @@
 import React from "react";
 import type { Address } from "@/lib/types";
+import DetailItem from "./DetailItem";
 
 interface AddressesProps {
   addresses?: Address[] | null;
@@ -15,8 +16,7 @@ export default function Addresses({
   if (!addresses || addresses.length === 0) return null;
 
   return (
-    <div>
-      <h3 className="text-sm font-medium text-gray-500 mb-2">Адреси</h3>
+    <DetailItem title="Адреси">
       <div className="space-y-2">
         {addresses.map((address, index) => (
           <button
@@ -40,6 +40,6 @@ export default function Addresses({
           </button>
         ))}
       </div>
-    </div>
+    </DetailItem>
   );
 }
