@@ -26,11 +26,11 @@ messaging.onBackgroundMessage((payload) => {
   );
 
   const notificationTitle =
-    payload.notification?.title || "Ново съобщение в Обориште";
+    payload.notification?.title || "Ново съобщение в Оборище";
   const notificationOptions = {
     body: payload.notification?.body || "",
     icon: payload.notification?.icon || "/icon-192x192.png",
-    badge: "/badge-72x72.png",
+    badge: "/icon-72x72.png",
     tag: payload.data?.messageId || "default",
     data: {
       url: payload.data?.url || payload.fcmOptions?.link || "/",

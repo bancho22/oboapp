@@ -365,8 +365,9 @@ async function sendPushNotification(
     await messaging.send({
       token: subscription.token,
       notification: {
-        title: "Ново съобщение в Обориште",
+        title: "Ново съобщение в Оборище",
         body: `${messagePreview}${distanceText}`,
+        imageUrl: "/icon-192x192.png",
       },
       data: {
         messageId: match.messageId,

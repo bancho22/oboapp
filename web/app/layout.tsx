@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_BASE_URL || "https://oborishte-map.vercel.app"
   ),
+  manifest: "/manifest.json",
   openGraph: {
     title: "Карта Оборище",
     description: "Следи събитията в район Оборище",
