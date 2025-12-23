@@ -1,0 +1,25 @@
+# Copy this file to terraform.tfvars and fill in your values
+# terraform.tfvars is git-ignored for security
+
+project_id = "your-project-id"
+region     = "europe-west1"
+
+# Optional overrides
+# image_tag = "v1.0.0"
+# schedule_timezone = "UTC"
+
+# Customize schedules (cron format: minute hour day month weekday)
+# Examples:
+#   "0 6 * * *"   - Daily at 6:00 AM
+#   "0 6 * * 1"   - Weekly on Mondays at 6:00 AM
+#   "0 */6 * * *" - Every 6 hours
+#   "30 8 * * 1-5" - Weekdays at 8:30 AM
+#
+# schedules = {
+#   crawl_rayon_oborishte = "0 6 * * *"
+#   crawl_sofia           = "0 7 * * *"
+#   crawl_sofiyska_voda   = "0 8 * * *"
+#   crawl_toplo           = "0 9 * * *"
+#   ingest                = "0 10 * * *"
+#   notify                = "0 11 * * *"
+# }

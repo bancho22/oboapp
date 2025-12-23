@@ -1,0 +1,11 @@
+# Terraform state
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfvars
+terraform/*.auto.tfvars
+
+# Crash log files
+terraform/crash.log
+terraform/crash.*.log
