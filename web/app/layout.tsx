@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import ClientLayout from "@/components/ClientLayout";
 
@@ -30,9 +31,44 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+
   return (
     <html lang="bg">
       <body>
+        {gaId && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+              strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                
+                // Wait for consent before initializing
+                gtag('consent', 'default', {
+                  'analytics_storage': 'denied'
+                });
+                
+                // Check for stored consent and initialize if granted
+                if (typeof window !== 'undefined') {
+                  const consent = localStorage.getItem('ga_consent');
+                  if (consent === 'granted') {
+                    gtag('consent', 'update', {
+                      'analytics_storage': 'granted'
+                    });
+                    gtag('config', '${gaId}', {
+                      page_path: window.location.pathname,
+                    });
+                  }
+                }
+              `}
+            </Script>
+          </>
+        )}
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>

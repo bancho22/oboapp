@@ -1,0 +1,198 @@
+// Google Analytics utility functions
+
+// Event names and their parameters
+export type AnalyticsEvent =
+  // Zone Management
+  | { name: "zone_add_initiated"; params: { user_authenticated: boolean } }
+  | { name: "zone_radius_changed"; params: { radius: number; is_new: boolean } }
+  | { name: "zone_save_completed"; params: { radius: number; is_new: boolean } }
+  | { name: "zone_save_cancelled"; params: { is_new: boolean } }
+  | { name: "zone_clicked"; params: { zone_id: string; radius: number } }
+  | {
+      name: "zone_move_initiated";
+      params: { zone_id: string; current_radius: number };
+    }
+  | { name: "zone_deleted"; params: { zone_id: string; radius: number } }
+  // Authentication
+  | { name: "login_initiated"; params: { source: "prompt" | "header" } }
+  | { name: "login_prompt_dismissed"; params: {} }
+  | { name: "logout_clicked"; params: { zones_count: number } }
+  // Notifications
+  | {
+      name: "notification_permission_accepted";
+      params: { zones_count: number };
+    }
+  | {
+      name: "notification_permission_declined";
+      params: { zones_count: number };
+    }
+  // Prompts
+  | { name: "prompt_add_zones_clicked"; params: { prompt_type: "first_zone" } }
+  // Content Engagement
+  | {
+      name: "message_clicked";
+      params: { message_id: string; source_id: string; location: string };
+    }
+  | {
+      name: "message_detail_closed";
+      params: {
+        message_id: string;
+        close_method: "backdrop" | "esc" | "button" | "drag";
+      };
+    }
+  | {
+      name: "map_feature_clicked";
+      params: {
+        message_id: string;
+        geometry_type: "Point" | "LineString" | "Polygon";
+      };
+    }
+  | {
+      name: "address_clicked";
+      params: { message_id: string; formatted_address: string };
+    }
+  // External Links
+  | {
+      name: "external_link_clicked";
+      params: {
+        url: string;
+        location: string;
+        source_id?: string;
+        source_name?: string;
+        link_text?: string;
+      };
+    };
+
+declare global {
+  interface Window {
+    gtag?: (
+      command: "config" | "event" | "js" | "consent",
+      targetId: string | Date,
+      config?: Record<string, unknown>
+    ) => void;
+  }
+}
+
+const CONSENT_KEY = "ga_consent";
+const CONSENT_GRANTED = "granted";
+const CONSENT_DENIED = "denied";
+
+// Check if user has granted consent
+export function hasConsent(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(CONSENT_KEY) === CONSENT_GRANTED;
+}
+
+// Store consent decision
+export function setConsent(granted: boolean): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(CONSENT_KEY, granted ? CONSENT_GRANTED : CONSENT_DENIED);
+}
+
+// Check if user has made a consent decision
+export function hasConsentDecision(): boolean {
+  if (typeof window === "undefined") return false;
+  const consent = localStorage.getItem(CONSENT_KEY);
+  return consent === CONSENT_GRANTED || consent === CONSENT_DENIED;
+}
+
+// Initialize Google Analytics
+export function initGA(): void {
+  const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+
+  if (!measurementId) {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[GA] No measurement ID configured");
+    }
+    return;
+  }
+
+  if (!hasConsent()) {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[GA] Consent not granted, skipping initialization");
+    }
+    return;
+  }
+
+  if (typeof window !== "undefined" && window.gtag) {
+    window.gtag("consent", "update", {
+      analytics_storage: "granted",
+    });
+
+    window.gtag("config", measurementId, {
+      page_path: window.location.pathname,
+    });
+
+    if (process.env.NODE_ENV === "development") {
+      console.log("[GA] Initialized with measurement ID:", measurementId);
+    }
+  }
+}
+
+// Track page view
+export function trackPageView(url: string): void {
+  const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+
+  if (!measurementId || !hasConsent()) return;
+
+  if (typeof window !== "undefined" && window.gtag) {
+    window.gtag("config", measurementId, {
+      page_path: url,
+    });
+
+    if (process.env.NODE_ENV === "development") {
+      console.log("[GA] Page view:", url);
+    }
+  }
+}
+
+// Track custom event
+export function trackEvent<T extends AnalyticsEvent>(event: T): void {
+  const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+
+  if (!measurementId) {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[GA] Event (no ID):", event.name, event.params);
+    }
+    return;
+  }
+
+  if (!hasConsent()) {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[GA] Event (no consent):", event.name, event.params);
+    }
+    return;
+  }
+
+  if (typeof window !== "undefined" && window.gtag) {
+    window.gtag("event", event.name, event.params);
+
+    if (process.env.NODE_ENV === "development") {
+      console.log("[GA] Event:", event.name, event.params);
+    }
+  } else if (process.env.NODE_ENV === "development") {
+    console.log("[GA] Event (gtag not loaded):", event.name, event.params);
+  }
+}
+
+// Debounce helper for high-frequency events
+export function debounce<T extends AnalyticsEvent>(
+  callback: (event: T) => void,
+  delay: number
+): (event: T) => void {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  return (event: T) => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+
+    timeoutId = setTimeout(() => {
+      callback(event);
+      timeoutId = null;
+    }, delay);
+  };
+}
+
+// Create a debounced version of trackEvent for high-frequency events
+export const trackEventDebounced = debounce(trackEvent, 300);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 interface AddInterestsPromptProps {
   readonly onAddInterests: () => void;
@@ -16,6 +17,10 @@ export default function AddInterestsPrompt({
   }
 
   const handleAddInterests = () => {
+    trackEvent({
+      name: "prompt_add_zones_clicked",
+      params: { prompt_type: "first_zone" },
+    });
     setIsVisible(false);
     onAddInterests();
   };

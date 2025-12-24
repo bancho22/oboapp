@@ -1,4 +1,5 @@
 import React from "react";
+import { trackEvent } from "@/lib/analytics";
 import type { Address } from "@/lib/types";
 import DetailItem from "./DetailItem";
 
@@ -6,12 +7,14 @@ interface AddressesProps {
   addresses?: Address[] | null;
   onAddressClick?: (lat: number, lng: number) => void;
   onClose: () => void;
+  messageId?: string;
 }
 
 export default function Addresses({
   addresses,
   onAddressClick,
   onClose,
+  messageId = "unknown",
 }: AddressesProps) {
   if (!addresses || addresses.length === 0) return null;
 
@@ -22,6 +25,13 @@ export default function Addresses({
           <button
             key={`address-${address.formattedAddress}-${index}`}
             onClick={() => {
+              trackEvent({
+                name: "address_clicked",
+                params: {
+                  message_id: messageId,
+                  formatted_address: address.formattedAddress,
+                },
+              });
               onAddressClick?.(
                 address.coordinates.lat,
                 address.coordinates.lng

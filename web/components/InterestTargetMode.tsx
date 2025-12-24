@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Circle } from "@react-google-maps/api";
+import { trackEvent, trackEventDebounced } from "@/lib/analytics";
 
 interface InterestTargetModeProps {
   readonly map: google.maps.Map | null;
@@ -34,6 +35,7 @@ export default function InterestTargetMode({
   } | null>(null);
   const [radius, setRadius] = useState(initialRadius);
   const [isSaving, setIsSaving] = useState(false);
+  const isEditingRef = useRef(initialRadius !== DEFAULT_RADIUS);
 
   // Update center when map moves
   useEffect(() => {
@@ -65,15 +67,32 @@ export default function InterestTargetMode({
 
     setIsSaving(true);
     try {
+      trackEvent({
+        name: "zone_save_completed",
+        params: { radius, is_new: !isEditingRef.current },
+      });
       onSave(currentCenter, radius);
     } finally {
       setIsSaving(false);
     }
   };
 
+  const handleCancel = useCallback(() => {
+    trackEvent({
+      name: "zone_save_cancelled",
+      params: { is_new: !isEditingRef.current },
+    });
+    onCancel();
+  }, [onCancel]);
+
   const handleRadiusChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(event.target.value);
     setRadius(value);
+    // Track radius changes with debouncing to avoid performance impact
+    trackEventDebounced({
+      name: "zone_radius_changed",
+      params: { radius: value, is_new: !isEditingRef.current },
+    });
   };
 
   return (
@@ -140,7 +159,7 @@ export default function InterestTargetMode({
           {/* Action Buttons */}
           <div className="flex gap-2">
             <button
-              onClick={onCancel}
+              onClick={handleCancel}
               disabled={isSaving}
               className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >

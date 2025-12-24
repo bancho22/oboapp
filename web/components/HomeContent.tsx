@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { trackEvent } from "@/lib/analytics";
 import MapComponent from "@/components/MapComponent";
 import MessageDetailView from "@/components/MessageDetailView";
 import NotificationPrompt from "@/components/NotificationPrompt";
@@ -184,6 +185,14 @@ export default function HomeContent() {
   const handleMoveInterest = useCallback(() => {
     if (!selectedInterest || !centerMapFn) return;
 
+    trackEvent({
+      name: "zone_move_initiated",
+      params: {
+        zone_id: selectedInterest.id || "unknown",
+        current_radius: selectedInterest.radius,
+      },
+    });
+
     // Center map on the interest
     centerMapFn(
       selectedInterest.coordinates.lat,
@@ -208,6 +217,13 @@ export default function HomeContent() {
     if (!selectedInterest?.id) return;
 
     try {
+      trackEvent({
+        name: "zone_deleted",
+        params: {
+          zone_id: selectedInterest.id,
+          radius: selectedInterest.radius,
+        },
+      });
       await deleteInterest(selectedInterest.id);
       setInterestMenuPosition(null);
       setSelectedInterest(null);
@@ -324,7 +340,10 @@ export default function HomeContent() {
 
             {/* Add interests button - shown when user is logged in and has interests */}
             {user && interests.length > 0 && (
-              <AddInterestButton onClick={handleStartAddInterest} />
+              <AddInterestButton
+                onClick={handleStartAddInterest}
+                isUserAuthenticated={!!user}
+              />
             )}
           </>
         )}
@@ -406,7 +425,11 @@ export default function HomeContent() {
 
       {/* Notification permission prompt */}
       {showPrompt && (
-        <NotificationPrompt onAccept={onAccept} onDecline={onDecline} />
+        <NotificationPrompt
+          onAccept={onAccept}
+          onDecline={onDecline}
+          zonesCount={interests.length}
+        />
       )}
 
       {/* Login prompt for non-authenticated users */}

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 import sources from "@/lib/sources.json";
 import DetailItem from "./DetailItem";
 
@@ -81,6 +82,17 @@ export default function SourceDisplay({ sourceId, sourceUrl }: SourceProps) {
             rel="noopener noreferrer"
             aria-label={`Отвори ${source?.name || sourceId} в нов таб`}
             className="flex items-center space-x-2"
+            onClick={() => {
+              trackEvent({
+                name: "external_link_clicked",
+                params: {
+                  url: sourceUrl || "",
+                  location: "message_detail",
+                  source_id: sourceId,
+                  source_name: source?.name,
+                },
+              });
+            }}
           >
             {content}
           </a>

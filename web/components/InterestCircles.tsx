@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Circle } from "@react-google-maps/api";
+import { trackEvent } from "@/lib/analytics";
 import { Interest } from "@/lib/types";
 
 interface InterestCirclesProps {
@@ -69,6 +70,17 @@ export default function InterestCircles({
 
       const isHovered = hoveredInterestId === interest.id;
 
+      const handleClick = () => {
+        trackEvent({
+          name: "zone_clicked",
+          params: {
+            zone_id: interest.id || "unknown",
+            radius: interest.radius,
+          },
+        });
+        onInterestClick(interest);
+      };
+
       return (
         <Circle
           key={compositeKey}
@@ -86,7 +98,7 @@ export default function InterestCircles({
               ? CIRCLE_STROKE_OPACITY_HOVER
               : CIRCLE_STROKE_OPACITY,
           }}
-          onClick={() => onInterestClick(interest)}
+          onClick={handleClick}
           onMouseOver={() => setHoveredInterestId(interest.id ?? null)}
           onMouseOut={() => {
             if (hoveredInterestId === interest.id) {

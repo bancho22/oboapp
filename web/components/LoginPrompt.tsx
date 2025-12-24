@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 import PromptCard from "./PromptCard";
 import { useAuth } from "@/lib/auth-context";
 
@@ -13,10 +14,12 @@ export default function LoginPrompt() {
   }
 
   const handleLogin = () => {
+    trackEvent({ name: "login_initiated", params: { source: "prompt" } });
     signInWithGoogle();
   };
 
   const handleClose = () => {
+    trackEvent({ name: "login_prompt_dismissed", params: {} });
     setIsVisible(false);
   };
 

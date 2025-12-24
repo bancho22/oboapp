@@ -1,16 +1,34 @@
 "use client";
 
+import { trackEvent } from "@/lib/analytics";
 import PromptCard from "./PromptCard";
 
 interface NotificationPromptProps {
   readonly onAccept: () => void;
   readonly onDecline: () => void;
+  readonly zonesCount?: number;
 }
 
 export default function NotificationPrompt({
   onAccept,
   onDecline,
+  zonesCount = 0,
 }: NotificationPromptProps) {
+  const handleAccept = () => {
+    trackEvent({
+      name: "notification_permission_accepted",
+      params: { zones_count: zonesCount },
+    });
+    onAccept();
+  };
+
+  const handleDecline = () => {
+    trackEvent({
+      name: "notification_permission_declined",
+      params: { zones_count: zonesCount },
+    });
+    onDecline();
+  };
   return (
     <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <PromptCard
@@ -32,11 +50,11 @@ export default function NotificationPrompt({
         note="Можеш да промениш това по всяко време в настройките на браузъра."
         primaryButton={{
           text: "Разреши известия",
-          onClick: onAccept,
+          onClick: handleAccept,
         }}
         secondaryButton={{
           text: "Не сега",
-          onClick: onDecline,
+          onClick: handleDecline,
         }}
       />
     </div>

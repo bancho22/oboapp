@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 import { Message } from "@/lib/types";
 import sources from "@/lib/sources.json";
 
@@ -77,11 +78,23 @@ export default function MessageCard({ message, onClick }: MessageCardProps) {
   const snippet = createSnippet(message.text);
   const formattedDate = formatDate(message.finalizedAt);
 
+  const handleClick = () => {
+    trackEvent({
+      name: "message_clicked",
+      params: {
+        message_id: message.id || "unknown",
+        source_id: message.source || "unknown",
+        location: "grid",
+      },
+    });
+    onClick(message);
+  };
+
   return (
     <button
       type="button"
       className="bg-white rounded-lg shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow cursor-pointer w-full text-left"
-      onClick={() => onClick(message)}
+      onClick={handleClick}
     >
       <div className="space-y-4">
         {/* Source */}

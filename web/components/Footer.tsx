@@ -1,3 +1,7 @@
+"use client";
+
+import { trackEvent } from "@/lib/analytics";
+
 export default function Footer() {
   return (
     <footer className="bg-[#f8f9fa] border-t border-gray-200">
@@ -37,6 +41,16 @@ export default function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[#5DADE2] hover:underline"
+                  onClick={() => {
+                    trackEvent({
+                      name: "external_link_clicked",
+                      params: {
+                        url: "https://rayon-oborishte.bg/",
+                        location: "footer",
+                        link_text: "Район Оборище",
+                      },
+                    });
+                  }}
                 >
                   rayon-oborishte.bg
                 </a>
@@ -59,6 +73,16 @@ export default function Footer() {
               target="_blank"
               rel="noopener noreferrer"
               className="text-[#5DADE2] hover:underline"
+              onClick={() => {
+                trackEvent({
+                  name: "external_link_clicked",
+                  params: {
+                    url: "https://github.com/vbuch/oborishte-map",
+                    location: "footer",
+                    link_text: "Отворен код",
+                  },
+                });
+              }}
             >
               Отворен код
             </a>

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Marker, Polyline, Polygon } from "@react-google-maps/api";
+import { trackEvent } from "@/lib/analytics";
 import { Message } from "@/lib/types";
 
 interface GeoJSONLayerProps {
@@ -81,6 +82,13 @@ export default function GeoJSONLayer({
             zIndex={10}
             onClick={() => {
               if (message.id && onFeatureClick) {
+                trackEvent({
+                  name: "map_feature_clicked",
+                  params: {
+                    message_id: message.id,
+                    geometry_type: "Point",
+                  },
+                });
                 onFeatureClick(message.id);
               }
             }}
@@ -109,6 +117,13 @@ export default function GeoJSONLayer({
             }}
             onClick={() => {
               if (message.id && onFeatureClick) {
+                trackEvent({
+                  name: "map_feature_clicked",
+                  params: {
+                    message_id: message.id,
+                    geometry_type: "LineString",
+                  },
+                });
                 onFeatureClick(message.id);
               }
             }}
@@ -134,6 +149,13 @@ export default function GeoJSONLayer({
             }}
             onClick={() => {
               if (message.id && onFeatureClick) {
+                trackEvent({
+                  name: "map_feature_clicked",
+                  params: {
+                    message_id: message.id,
+                    geometry_type: "Polygon",
+                  },
+                });
                 onFeatureClick(message.id);
               }
             }}

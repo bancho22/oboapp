@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 import { Message } from "@/lib/types";
 import { useDragToClose } from "@/lib/hooks/useDragToClose";
 import Header from "./Header";
@@ -23,8 +24,24 @@ export default function MessageDetailView({
   const [isVisible, setIsVisible] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
 
+  // Create a wrapper for drag-to-close that tracks the event
+  const handleDragClose = () => {
+    if (message) {
+      trackEvent({
+        name: "message_detail_closed",
+        params: {
+          message_id: message.id || "unknown",
+          close_method: "drag",
+        },
+      });
+    }
+    onClose();
+  };
+
   // Drag to close functionality
-  const { isDragging, dragOffset, handlers } = useDragToClose({ onClose });
+  const { isDragging, dragOffset, handlers } = useDragToClose({
+    onClose: handleDragClose,
+  });
 
   // Handle animation states
   useEffect(() => {
@@ -42,6 +59,13 @@ export default function MessageDetailView({
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape" && message) {
+        trackEvent({
+          name: "message_detail_closed",
+          params: {
+            message_id: message.id || "unknown",
+            close_method: "esc",
+          },
+        });
         onClose();
       }
     };
@@ -70,7 +94,18 @@ export default function MessageDetailView({
         className={`fixed inset-0 z-30 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ${
           isVisible ? "opacity-100" : "opacity-0"
         }`}
-        onClick={onClose}
+        onClick={() => {
+          if (message) {
+            trackEvent({
+              name: "message_detail_closed",
+              params: {
+                message_id: message.id || "unknown",
+                close_method: "backdrop",
+              },
+            });
+          }
+          onClose();
+        }}
         aria-hidden="true"
       />
 
@@ -90,7 +125,7 @@ export default function MessageDetailView({
           transition: isDragging ? "none" : undefined,
         }}
       >
-        <Header handlers={handlers} onClose={onClose} />
+        <Header handlers={handlers} onClose={onClose} messageId={message.id} />
 
         <div
           className={`px-4 sm:px-6 py-4 pb-6 sm:pb-4 space-y-6 transition-opacity duration-500 delay-100 ${
@@ -135,6 +170,7 @@ export default function MessageDetailView({
             addresses={message.addresses}
             onAddressClick={onAddressClick}
             onClose={onClose}
+            messageId={message.id}
           />
 
           {message.geoJson?.features && (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 import { SourceConfig } from "@/lib/types";
 
 interface SourceCardProps {
@@ -54,6 +55,17 @@ export default function SourceCard({ source }: SourceCardProps) {
           target="_blank"
           rel="noopener noreferrer"
           className="text-blue-600 hover:text-blue-800 text-sm font-medium underline break-all"
+          onClick={() => {
+            trackEvent({
+              name: "external_link_clicked",
+              params: {
+                url: source.url,
+                location: "sources_page",
+                source_id: source.id,
+                source_name: source.name,
+              },
+            });
+          }}
         >
           {displayUrl}
         </a>

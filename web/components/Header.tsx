@@ -1,11 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 import { useAuth } from "@/lib/auth-context";
 
 export default function Header() {
   const { user, signOut } = useAuth();
   const [logoError, setLogoError] = useState(false);
+
+  const handleSignOut = () => {
+    // Track logout - zones count would need to be passed as prop if needed
+    trackEvent({ name: "logout_clicked", params: { zones_count: 0 } });
+    signOut();
+  };
 
   return (
     <>
@@ -55,7 +62,7 @@ export default function Header() {
                     )}
                   </div>
                   <button
-                    onClick={signOut}
+                    onClick={handleSignOut}
                     className="px-4 py-2 text-sm font-medium text-white bg-[#E74C3C] rounded-md hover:bg-[#C0392B] transition-colors"
                   >
                     Излез

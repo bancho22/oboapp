@@ -1,18 +1,35 @@
 import React from "react";
+import { trackEvent } from "@/lib/analytics";
 
 interface HeaderProps {
   handlers: Record<string, any>;
   onClose: () => void;
+  messageId?: string;
 }
 
-export default function Header({ handlers, onClose }: HeaderProps) {
+export default function Header({
+  handlers,
+  onClose,
+  messageId = "unknown",
+}: HeaderProps) {
+  const handleClose = () => {
+    trackEvent({
+      name: "message_detail_closed",
+      params: {
+        message_id: messageId,
+        close_method: "button",
+      },
+    });
+    onClose();
+  };
+
   return (
     <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex items-center justify-between shadow-sm z-10">
       <button
         type="button"
         className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1 bg-gray-300 rounded-full sm:hidden cursor-grab active:cursor-grabbing"
         {...handlers}
-        onClick={onClose}
+        onClick={handleClose}
         aria-label="Плъзни, за да затвориш, или натисни, за да затвориш"
       />
 
@@ -20,7 +37,7 @@ export default function Header({ handlers, onClose }: HeaderProps) {
         Детайли за сигнала
       </h2>
       <button
-        onClick={onClose}
+        onClick={handleClose}
         className="text-gray-400 hover:text-gray-600 transition-colors p-1 hover:bg-gray-100 rounded-full mt-3 sm:mt-0"
         aria-label="Затвори детайлите"
       >
