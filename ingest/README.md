@@ -1,6 +1,6 @@
 # Ingest Pipeline
 
-Data collection and processing pipeline for the Oborishte Map. Collects infrastructure disruption notices from public sources (water, heating, road repairs), processes them into geocoded GeoJSON, and delivers notifications to interested users.
+Data collection and processing pipeline for OboApp. Collects infrastructure disruption notices from public sources (water, heating, road repairs), processes them into geocoded GeoJSON, and delivers notifications to interested users.
 
 ## Pipeline Overview
 

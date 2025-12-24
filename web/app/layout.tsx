@@ -4,23 +4,23 @@ import "./globals.css";
 import ClientLayout from "@/components/ClientLayout";
 
 export const metadata: Metadata = {
-  title: "Карта Оборище",
+  title: "OboApp",
   description: "Следи събитията в район Оборище",
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_BASE_URL || "https://oborishte-map.vercel.app"
+    process.env.NEXT_PUBLIC_BASE_URL || "https://oboapp.online"
   ),
   manifest: "/manifest.json",
   openGraph: {
-    title: "Карта Оборище",
+    title: "OboApp",
     description: "Следи събитията в район Оборище",
     images: ["/icon-512x512.png"],
     locale: "bg_BG",
     type: "website",
-    siteName: "Карта Оборище",
+    siteName: "OboApp",
   },
   twitter: {
     card: "summary",
-    title: "Карта Оборище",
+    title: "OboApp",
     description: "Следи събитията в район Оборище",
     images: ["/icon-512x512.png"],
   },

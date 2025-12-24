@@ -3,7 +3,7 @@ import sources from "@/lib/sources.json";
 import SourceCard from "@/components/SourceCard";
 
 export const metadata: Metadata = {
-  title: "Източници - Карта Оборище",
+  title: "Източници - OboApp",
   description: "Източници на данни за събития и уведомления в район Оборище",
 };
 

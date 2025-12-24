@@ -1,6 +1,6 @@
 # Notifications System
 
-This directory contains the notification matching and delivery system for Oborishte Map.
+This directory contains the notification matching and delivery system for OboApp.
 
 ## Overview
 

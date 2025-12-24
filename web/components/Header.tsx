@@ -44,7 +44,7 @@ export default function Header() {
                 )}
               </a>
               <div>
-                <h1 className="text-lg font-bold">Карта Оборище</h1>
+                <h1 className="text-lg font-bold">OboApp</h1>
               </div>
             </div>
 
