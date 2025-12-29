@@ -90,6 +90,7 @@ async function fetchSources(
       sourceType: data.sourceType,
       crawledAt: data.crawledAt?.toDate() ?? new Date(),
       geoJson: data.geoJson,
+      markdownText: data.markdownText,
     });
   }
 

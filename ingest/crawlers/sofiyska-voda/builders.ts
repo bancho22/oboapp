@@ -4,7 +4,10 @@ import type {
   SofiyskaVodaSourceDocument,
 } from "./types";
 import type { GeoJSONFeature, GeoJSONFeatureCollection } from "@/lib/types";
-import { sanitizeText, ensureDate, formatDate } from "./formatters";
+import { sanitizeText, ensureDate, buildMessage } from "./formatters";
+
+// Re-export for backward compatibility
+export { buildMessage } from "./formatters";
 
 const SOURCE_TYPE = "sofiyska-voda";
 const BASE_URL =
@@ -41,53 +44,6 @@ export function buildTitle(
     parts.join(" – ") ||
     `${layer.titlePrefix} ${attributes?.OBJECTID ?? ""}`.trim()
   );
-}
-
-/**
- * Build markdown message from feature attributes
- */
-export function buildMessage(
-  attributes: ArcGisFeature["attributes"],
-  layer: LayerConfig,
-  dateFormatter?: Intl.DateTimeFormat
-): string {
-  const paragraphs: string[] = [];
-  const location = sanitizeText(attributes?.LOCATION);
-  const description = sanitizeText(attributes?.DESCRIPTION);
-
-  if (location) {
-    paragraphs.push(location);
-  }
-
-  if (description && description !== location) {
-    paragraphs.push(description);
-  }
-
-  const startDate = formatDate(ensureDate(attributes?.START_), dateFormatter);
-  const endDate = formatDate(ensureDate(attributes?.ALERTEND), dateFormatter);
-  const lastUpdate = formatDate(
-    ensureDate(attributes?.LASTUPDATE),
-    dateFormatter
-  );
-
-  const metadata = [
-    `**Категория:** ${layer.name}`,
-    attributes?.ACTIVESTATUS ? `**Статус:** ${attributes.ACTIVESTATUS}` : null,
-    startDate ? `**Начало:** ${startDate}` : null,
-    endDate ? `**Край:** ${endDate}` : null,
-    lastUpdate ? `**Последно обновяване:** ${lastUpdate}` : null,
-    attributes?.SOFIADISTRICT
-      ? `**Район на СО (ID):** ${attributes.SOFIADISTRICT}`
-      : null,
-    attributes?.CONTACT ? `**Контакт:** ${attributes.CONTACT}` : null,
-  ].filter(Boolean);
-
-  if (metadata.length) {
-    // Use 2 spaces + newline for proper markdown hard line breaks
-    paragraphs.push(metadata.join("  \n"));
-  }
-
-  return paragraphs.join("\n\n");
 }
 
 /**
@@ -204,7 +160,11 @@ export function buildSourceDocument(
   }
 
   const url = getFeatureUrl(layer.id, objectId);
-  const message = buildMessage(feature.attributes, layer, dateFormatter);
+  const message = buildMessage(
+    feature.attributes as Record<string, unknown>,
+    layer,
+    dateFormatter
+  );
   const geoJson = buildGeoJsonFeatureCollection(feature, layer);
   if (!geoJson) {
     console.warn(`⚠️ Skipping feature without geometry: ${url}`);

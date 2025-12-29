@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { sanitizeText, ensureDate, formatDate } from "./formatters";
+import {
+  sanitizeText,
+  ensureDate,
+  formatDate,
+  buildMessage,
+} from "./formatters";
 
 describe("sofiyska-voda/formatters", () => {
   describe("sanitizeText", () => {
@@ -77,6 +82,119 @@ describe("sofiyska-voda/formatters", () => {
 
     it("should return null for undefined date", () => {
       expect(formatDate()).toBeNull();
+    });
+  });
+
+  describe("buildMessage", () => {
+    const mockLayer = { name: "Текущи спирания" };
+    const mockFormatter = new Intl.DateTimeFormat("bg-BG", {
+      dateStyle: "long",
+      timeStyle: "short",
+      timeZone: "Europe/Sofia",
+    });
+
+    it("should build message with location and description", () => {
+      const attributes = {
+        LOCATION: "ж.к. Младост 4",
+        DESCRIPTION: "Ремонт на уличен водопровод",
+        LASTUPDATE: new Date("2025-12-28T10:58:00").getTime(),
+      };
+
+      const result = buildMessage(attributes, mockLayer, mockFormatter);
+
+      expect(result).toContain("ж.к. Младост 4");
+      expect(result).toContain("Ремонт на уличен водопровод");
+      expect(result).toContain("**Категория:** Текущи спирания");
+      expect(result).toContain("**Последно обновяване:**");
+    });
+
+    it("should use markdown hard line breaks for metadata", () => {
+      const attributes = {
+        LOCATION: "Test Location",
+        ACTIVESTATUS: "In Progress",
+        START_: new Date("2025-12-28T12:57:00").getTime(),
+        LASTUPDATE: new Date("2025-12-28T10:58:00").getTime(),
+      };
+
+      const result = buildMessage(attributes, mockLayer, mockFormatter);
+
+      // Metadata should be joined with 2 spaces + newline (markdown hard break)
+      expect(result).toContain("  \n");
+      expect(result).toContain("**Категория:**");
+      expect(result).toContain("**Статус:**");
+      expect(result).toContain("**Начало:**");
+    });
+
+    it("should include bold labels for all metadata fields", () => {
+      const attributes = {
+        LOCATION: "Test",
+        ACTIVESTATUS: "Active",
+        START_: Date.now(),
+        ALERTEND: Date.now(),
+        LASTUPDATE: Date.now(),
+        SOFIADISTRICT: 13,
+        CONTACT: "test@example.com",
+      };
+
+      const result = buildMessage(attributes, mockLayer);
+
+      expect(result).toContain("**Категория:**");
+      expect(result).toContain("**Статус:**");
+      expect(result).toContain("**Начало:**");
+      expect(result).toContain("**Край:**");
+      expect(result).toContain("**Последно обновяване:**");
+      expect(result).toContain("**Район на СО (ID):**");
+      expect(result).toContain("**Контакт:**");
+    });
+
+    it("should skip duplicate location and description", () => {
+      const attributes = {
+        LOCATION: "Same text",
+        DESCRIPTION: "Same text",
+      };
+
+      const result = buildMessage(attributes, mockLayer);
+      const occurrences = (result.match(/Same text/g) || []).length;
+      expect(occurrences).toBe(1);
+    });
+
+    it("should handle missing optional fields", () => {
+      const attributes = {
+        LOCATION: "Test Location",
+      };
+
+      const result = buildMessage(attributes, mockLayer);
+
+      expect(result).toContain("Test Location");
+      expect(result).toContain("**Категория:**");
+      expect(result).not.toContain("**Статус:**");
+      expect(result).not.toContain("**Начало:**");
+    });
+
+    it("should separate paragraphs with double newlines", () => {
+      const attributes = {
+        LOCATION: "Location text",
+        DESCRIPTION: "Description text",
+        LASTUPDATE: Date.now(),
+      };
+
+      const result = buildMessage(attributes, mockLayer);
+
+      // Location and description should be separate paragraphs
+      expect(result).toContain("Location text\n\n");
+      expect(result).toContain("Description text\n\n");
+    });
+
+    it("should sanitize location and description", () => {
+      const attributes = {
+        LOCATION: "  Multiple   Spaces  ",
+        DESCRIPTION: "Extra\n\tWhitespace",
+      };
+
+      const result = buildMessage(attributes, mockLayer);
+
+      expect(result).toContain("Multiple Spaces");
+      expect(result).toContain("Extra Whitespace");
     });
   });
 });
