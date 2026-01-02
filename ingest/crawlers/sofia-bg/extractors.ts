@@ -1,46 +1,13 @@
 import type { Page } from "playwright";
 import type { PostLink } from "./types";
 import { SELECTORS } from "./selectors";
+import { extractPostLinks as extractPostLinksShared } from "../shared/extractors";
 
 /**
  * Extract post links from the index page (first page only)
  */
 export async function extractPostLinks(page: Page): Promise<PostLink[]> {
-  console.log("📋 Extracting post links from index page...");
-
-  const posts = await page.evaluate((selectors) => {
-    const postLinks: { url: string; title: string; date: string }[] = [];
-
-    // Find all article containers
-    const containers = document.querySelectorAll(
-      selectors.INDEX.POST_CONTAINER
-    );
-
-    containers.forEach((container) => {
-      // Find the link to the article
-      const linkEl = container.querySelector(selectors.INDEX.POST_LINK);
-      if (!linkEl) return;
-
-      const url = (linkEl as HTMLAnchorElement).href;
-
-      // Extract title
-      const titleEl = container.querySelector(selectors.INDEX.POST_TITLE);
-      const title = titleEl?.textContent?.trim() || "";
-
-      // Extract date
-      const dateEl = container.querySelector(selectors.INDEX.POST_DATE);
-      const date = dateEl?.textContent?.trim() || "";
-
-      if (url && title) {
-        postLinks.push({ url, title, date });
-      }
-    });
-
-    return postLinks;
-  }, SELECTORS);
-
-  console.log(`📊 Found ${posts.length} posts on index page`);
-  return posts;
+  return extractPostLinksShared(page, SELECTORS);
 }
 
 /**

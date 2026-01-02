@@ -1,55 +1,19 @@
 import type { Page } from "playwright";
 import type { PostLink } from "./types";
+import { SELECTORS } from "./selectors";
+import { extractPostLinks as extractPostLinksShared } from "../shared/extractors";
 
 /**
  * Extract post links from the index page
  */
 export async function extractPostLinks(page: Page): Promise<PostLink[]> {
-  console.log("📋 Extracting post links from index page...");
+  // Filter to only include actual post URLs (not category links, etc.)
+  const urlFilter = (url: string) =>
+    url.includes(
+      "/%d1%83%d0%b2%d0%b5%d0%b4%d0%be%d0%bc%d0%bb%d0%b5%d0%bd%d0%b8%d0%b5-"
+    );
 
-  const posts = await page.evaluate(() => {
-    const postLinks: { url: string; title: string; date: string }[] = [];
-
-    // Find all article elements or post containers
-    // Based on WordPress structure, each post is likely in an article or div with specific class
-    const articles = document.querySelectorAll("article, .post");
-
-    articles.forEach((article) => {
-      // Find the link to the post
-      const linkEl = article.querySelector('a[href*="rayon-oborishte.bg"]');
-      if (!linkEl) return;
-
-      const url = (linkEl as HTMLAnchorElement).href;
-
-      // Skip if it's not a full post URL (avoid category links, etc.)
-      if (
-        !url.includes(
-          "/%d1%83%d0%b2%d0%b5%d0%b4%d0%be%d0%bc%d0%bb%d0%b5%d0%bd%d0%b8%d0%b5-"
-        )
-      ) {
-        return;
-      }
-
-      // Extract title - try h2, h3, or the link text
-      const titleEl = article.querySelector("h2, h3, .entry-title") || linkEl;
-      const title = titleEl.textContent?.trim() || "";
-
-      // Extract date - look for time element or date class
-      const dateEl = article.querySelector(
-        'time, .date, .published, [class*="date"]'
-      );
-      const date = dateEl?.textContent?.trim() || "";
-
-      if (url && title) {
-        postLinks.push({ url, title, date });
-      }
-    });
-
-    return postLinks;
-  });
-
-  console.log(`📊 Found ${posts.length} posts on index page`);
-  return posts;
+  return extractPostLinksShared(page, SELECTORS, urlFilter);
 }
 
 /**

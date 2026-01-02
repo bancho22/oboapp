@@ -1,0 +1,153 @@
+import { describe, expect, it, vi } from "vitest";
+import type { Page } from "playwright";
+import { extractPostLinks, extractPostDetails } from "./extractors";
+
+describe("shared/extractors", () => {
+  describe("extractPostLinks", () => {
+    it("should extract post links from page", async () => {
+      const mockPosts = [
+        {
+          url: "https://example.com/post-1",
+          title: "First Post",
+          date: "1 януари 2025",
+        },
+        {
+          url: "https://example.com/post-2",
+          title: "Second Post",
+          date: "2 януари 2025",
+        },
+      ];
+
+      const mockPage = {
+        evaluate: vi.fn().mockResolvedValue(mockPosts),
+      } as unknown as Page;
+
+      const selectors = {
+        INDEX: {
+          POST_CONTAINER: ".post",
+          POST_LINK: "a",
+          POST_TITLE: "h2",
+          POST_DATE: ".date",
+        },
+        POST: {
+          TITLE: "h1",
+          DATE: ".date",
+        },
+      };
+
+      const result = await extractPostLinks(mockPage, selectors);
+
+      expect(result).toEqual(mockPosts);
+      expect(mockPage.evaluate).toHaveBeenCalledWith(
+        expect.any(Function),
+        selectors
+      );
+    });
+
+    it("should filter posts using urlFilter", async () => {
+      const mockPosts = [
+        {
+          url: "https://example.com/announcement-1",
+          title: "Announcement",
+          date: "1 януари 2025",
+        },
+        {
+          url: "https://example.com/category/general",
+          title: "Category",
+          date: "2 януари 2025",
+        },
+        {
+          url: "https://example.com/announcement-2",
+          title: "Another Announcement",
+          date: "3 януари 2025",
+        },
+      ];
+
+      const mockPage = {
+        evaluate: vi.fn().mockResolvedValue(mockPosts),
+      } as unknown as Page;
+
+      const selectors = {
+        INDEX: {
+          POST_CONTAINER: ".post",
+          POST_LINK: "a",
+          POST_TITLE: "h2",
+          POST_DATE: ".date",
+        },
+        POST: {
+          TITLE: "h1",
+          DATE: ".date",
+        },
+      };
+
+      const urlFilter = (url: string) => url.includes("announcement");
+
+      const result = await extractPostLinks(mockPage, selectors, urlFilter);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].title).toBe("Announcement");
+      expect(result[1].title).toBe("Another Announcement");
+    });
+
+    it("should return empty array when no posts found", async () => {
+      const mockPage = {
+        evaluate: vi.fn().mockResolvedValue([]),
+      } as unknown as Page;
+
+      const selectors = {
+        INDEX: {
+          POST_CONTAINER: ".post",
+          POST_LINK: "a",
+          POST_TITLE: "h2",
+          POST_DATE: ".date",
+        },
+        POST: {
+          TITLE: "h1",
+          DATE: ".date",
+        },
+      };
+
+      const result = await extractPostLinks(mockPage, selectors);
+
+      expect(result).toEqual([]);
+    });
+
+    it("should filter out all posts when urlFilter rejects all", async () => {
+      const mockPosts = [
+        {
+          url: "https://example.com/post-1",
+          title: "First Post",
+          date: "1 януари 2025",
+        },
+        {
+          url: "https://example.com/post-2",
+          title: "Second Post",
+          date: "2 януари 2025",
+        },
+      ];
+
+      const mockPage = {
+        evaluate: vi.fn().mockResolvedValue(mockPosts),
+      } as unknown as Page;
+
+      const selectors = {
+        INDEX: {
+          POST_CONTAINER: ".post",
+          POST_LINK: "a",
+          POST_TITLE: "h2",
+          POST_DATE: ".date",
+        },
+        POST: {
+          TITLE: "h1",
+          DATE: ".date",
+        },
+      };
+
+      const urlFilter = () => false;
+
+      const result = await extractPostLinks(mockPage, selectors, urlFilter);
+
+      expect(result).toEqual([]);
+    });
+  });
+});
