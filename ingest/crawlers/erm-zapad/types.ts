@@ -56,6 +56,7 @@ export interface ErmZapadSourceDocument {
   datePublished: string; // ISO format date
   title: string; // Human-readable title
   message: string; // Markdown-formatted description
+  markdownText: string; // Same as message - for consistency with ingest pipeline
   sourceType: "erm-zapad";
   crawledAt: Date;
   geoJson: GeoJSONFeatureCollection; // Pre-computed geographic data

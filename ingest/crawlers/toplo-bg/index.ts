@@ -56,16 +56,19 @@ export async function crawl(dryRun = false): Promise<void> {
     try {
       const { info, geoJson } = incident;
 
+      const message = buildMessage(
+        info.Name,
+        info.FromDate,
+        info.Addresses,
+        info.UntilDate
+      );
+
       const doc: SourceDocument = {
         url: buildUrl(info.ContentItemId),
         datePublished: info.FromDate,
         title: buildTitle(info),
-        message: buildMessage(
-          info.Name,
-          info.FromDate,
-          info.Addresses,
-          info.UntilDate
-        ),
+        message,
+        markdownText: message, // Store for display in details view
         sourceType: SOURCE_TYPE,
         crawledAt: new Date(),
         geoJson,

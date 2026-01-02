@@ -20,6 +20,24 @@ Each crawler:
 3. Stores documents in Firestore with `sourceType` identifier
 4. Tracks processed URLs to avoid duplicates
 
+### Markdown Text Handling
+
+Crawlers handle message formatting differently based on whether they provide precomputed GeoJSON:
+
+**Crawlers with precomputed GeoJSON** (erm-zapad, toplo-bg, sofiyska-voda):
+
+- Skip the AI filtering and extraction pipeline
+- Must store formatted text in both `message` and `markdownText` fields
+- The `markdownText` field is used for display in the message details view
+- Can produce markdown (erm-zapad, sofiyska-voda) or plain text (toplo-bg)
+
+**Crawlers without GeoJSON** (rayon-oborishte-bg, sofia-bg, mladost-bg):
+
+- Go through the full AI extraction pipeline
+- Store HTML content converted to markdown in `message` field only
+- The AI extraction stage produces `extractedData.markdown_text` for display
+- Don't need to set `markdownText` in source documents
+
 ## Running Crawlers
 
 ```bash
