@@ -433,7 +433,15 @@ export async function getStreetSectionGeometry(
           const maxIndex = Math.max(startIndex, endIndex);
 
           // Extract coordinates between the indices
-          const section = segment.slice(minIndex, maxIndex + 2);
+          let section = segment.slice(minIndex, maxIndex + 2);
+
+          // CRITICAL: Preserve directionality from start→end
+          // If startIndex > endIndex, we need to reverse the section
+          // to maintain the semantic order (from start coords to end coords)
+          if (startIndex > endIndex) {
+            section = section.slice().reverse();
+          }
+
           bestSection = section;
         }
       }
