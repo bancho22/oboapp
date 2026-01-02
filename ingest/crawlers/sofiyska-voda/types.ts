@@ -1,14 +1,7 @@
-import { GeoJSONFeatureCollection } from "@/lib/types";
+import { SourceDocumentWithGeoJson } from "../shared/types";
 
-export interface SofiyskaVodaSourceDocument {
-  url: string;
-  datePublished: string; // ISO format
-  title: string;
-  message: string; // Markdown text that feeds the ingest pipeline
-  markdownText?: string; // Markdown-formatted message for display
+export interface SofiyskaVodaSourceDocument extends SourceDocumentWithGeoJson {
   sourceType: "sofiyska-voda";
-  crawledAt: Date;
-  geoJson: GeoJSONFeatureCollection;
 }
 
 export interface ArcGisFeature {

@@ -10,4 +10,5 @@ export interface BaseSourceDocument {
 
 export interface SourceDocumentWithGeoJson extends BaseSourceDocument {
   geoJson: import("../../lib/types").GeoJSONFeatureCollection;
+  markdownText: string; // Required for crawlers with precomputed GeoJSON
 }

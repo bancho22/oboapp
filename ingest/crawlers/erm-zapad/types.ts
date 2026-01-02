@@ -1,4 +1,5 @@
 import type { GeoJSONFeatureCollection } from "@/lib/types";
+import { SourceDocumentWithGeoJson } from "../shared/types";
 
 /**
  * Customer point with coordinates
@@ -51,15 +52,8 @@ export interface Municipality {
 /**
  * Source document for ERM-Zapad incidents (stored in Firestore)
  */
-export interface ErmZapadSourceDocument {
-  url: string; // Unique identifier URL
-  datePublished: string; // ISO format date
-  title: string; // Human-readable title
-  message: string; // Markdown-formatted description
-  markdownText: string; // Same as message - for consistency with ingest pipeline
+export interface ErmZapadSourceDocument extends SourceDocumentWithGeoJson {
   sourceType: "erm-zapad";
-  crawledAt: Date;
-  geoJson: GeoJSONFeatureCollection; // Pre-computed geographic data
 }
 
 /**

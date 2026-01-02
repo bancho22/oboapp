@@ -12,9 +12,11 @@ dotenv.config({ path: resolve(process.cwd(), ".env.local") });
 const SOURCE_TYPE = "toplo-bg";
 const TARGET_URL = "https://toplo.bg/accidents-and-maintenance";
 
-interface SourceDocument extends SourceDocumentWithGeoJson {
+interface ToploBgSourceDocument extends SourceDocumentWithGeoJson {
   sourceType: typeof SOURCE_TYPE;
 }
+
+type SourceDocument = ToploBgSourceDocument;
 
 interface CrawlSummary {
   saved: number;
