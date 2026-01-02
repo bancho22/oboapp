@@ -4,6 +4,7 @@ import { useState } from "react";
 import { trackEvent } from "@/lib/analytics";
 import { Message } from "@/lib/types";
 import sources from "@/lib/sources.json";
+import { stripMarkdown } from "@/lib/markdown-utils";
 
 interface MessageCardProps {
   readonly message: Message;
@@ -46,10 +47,13 @@ export default function MessageCard({ message, onClick }: MessageCardProps) {
   // Create text snippet (120-150 characters)
   const createSnippet = (text: string): string => {
     const maxLength = 150;
-    if (text.length <= maxLength) return text;
+    // Strip markdown formatting for clean preview
+    const cleanText = stripMarkdown(text);
+
+    if (cleanText.length <= maxLength) return cleanText;
 
     // Try to cut at a word boundary near 150 chars
-    const truncated = text.substring(0, maxLength);
+    const truncated = cleanText.substring(0, maxLength);
     const lastSpace = truncated.lastIndexOf(" ");
 
     if (lastSpace > 120) {
@@ -75,7 +79,10 @@ export default function MessageCard({ message, onClick }: MessageCardProps) {
     return `${day}.${month}.${year} ${hours}:${minutes}`;
   };
 
-  const snippet = createSnippet(message.text);
+  // Use markdownText if available (from crawlers with precomputed GeoJSON),
+  // otherwise fall back to text
+  const displayText = message.markdownText || message.text;
+  const snippet = createSnippet(displayText);
   const formattedDate = formatDate(message.finalizedAt);
 
   const handleClick = () => {

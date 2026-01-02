@@ -1,6 +1,7 @@
 export interface Message {
   id?: string;
   text: string;
+  markdownText?: string;
   addresses?: Address[];
   extractedData?: ExtractedData;
   geoJson?: GeoJSONFeatureCollection;
