@@ -54,7 +54,7 @@ export function buildWebPageSourceDocument(
 
 /**
  * Process a single WordPress post
- * Generic implementation that accepts a custom document builder
+ * Generic implementation using buildWebPageSourceDocument
  */
 export async function processWordpressPost<
   TPostLink extends PostLink,
@@ -65,18 +65,7 @@ export async function processWordpressPost<
   adminDb: Firestore,
   sourceType: string,
   delayMs: number,
-  extractPostDetails: (page: Page) => Promise<TDetails>,
-  buildDocument: (
-    url: string,
-    postLink: TPostLink,
-    details: TDetails
-  ) => {
-    url: string;
-    title: string;
-    datePublished: string;
-    message: string;
-    sourceType: string;
-  }
+  extractPostDetails: (page: Page) => Promise<TDetails>
 ): Promise<void> {
   const { url, title } = postLink;
 
@@ -90,7 +79,13 @@ export async function processWordpressPost<
 
     const details = await extractPostDetails(page);
 
-    const postDetails = buildDocument(url, postLink, details);
+    const postDetails = buildWebPageSourceDocument(
+      url,
+      details.title,
+      details.dateText,
+      details.contentHtml,
+      sourceType
+    );
 
     const sourceDoc = {
       ...postDetails,

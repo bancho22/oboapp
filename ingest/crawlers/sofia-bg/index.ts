@@ -7,7 +7,6 @@ import type { Firestore } from "firebase-admin/firestore";
 import { PostLink } from "./types";
 import { extractPostLinks, extractPostDetails } from "./extractors";
 import {
-  buildWebPageSourceDocument,
   crawlWordpressPage,
   processWordpressPost,
 } from "../shared/webpage-crawlers";
@@ -33,15 +32,7 @@ const processPost = (
     adminDb,
     SOURCE_TYPE,
     DELAY_BETWEEN_REQUESTS,
-    extractPostDetails,
-    (url, _postLink, details) =>
-      buildWebPageSourceDocument(
-        url,
-        details.title,
-        details.dateText,
-        details.contentHtml,
-        SOURCE_TYPE
-      )
+    extractPostDetails
   );
 
 /**
