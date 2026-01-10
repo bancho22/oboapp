@@ -184,9 +184,9 @@ export default function MapComponent({
     if (targetMode?.active) {
       return {
         ...baseOptions,
-        zoomControl: false,
-        scrollwheel: false,
-        disableDoubleClickZoom: true,
+        zoomControl: true,
+        scrollwheel: true,
+        disableDoubleClickZoom: false,
         gestureHandling: "greedy" as google.maps.MapOptions["gestureHandling"],
       };
     }

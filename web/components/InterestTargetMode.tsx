@@ -15,7 +15,7 @@ interface InterestTargetModeProps {
   readonly onCancel: () => void;
 }
 
-const CIRCLE_OPACITY = 0.15;
+const CIRCLE_OPACITY = 0.2;
 
 // Radius constraints
 const MIN_RADIUS = 100;
@@ -36,28 +36,37 @@ export default function InterestTargetMode({
   const [isSaving, setIsSaving] = useState(false);
   const isEditingRef = useRef(initialRadius !== DEFAULT_RADIUS);
 
-  // Update center when map moves
+  // Set initial center when map is available
+  useEffect(() => {
+    if (!map || currentCenter) return;
+
+    const center = map.getCenter();
+    if (center) {
+      setCurrentCenter({
+        lat: center.lat(),
+        lng: center.lng(),
+      });
+    }
+  }, [map, currentCenter]);
+
+  // Handle map clicks to reposition circle
   useEffect(() => {
     if (!map) return;
 
-    const updateCenter = () => {
-      const center = map.getCenter();
-      if (center) {
-        setCurrentCenter({
-          lat: center.lat(),
-          lng: center.lng(),
-        });
+    const clickListener = map.addListener(
+      "click",
+      (e: google.maps.MapMouseEvent) => {
+        if (e.latLng) {
+          setCurrentCenter({
+            lat: e.latLng.lat(),
+            lng: e.latLng.lng(),
+          });
+        }
       }
-    };
-
-    // Set initial center
-    updateCenter();
-
-    // Update center on map movement
-    const listener = map.addListener("center_changed", updateCenter);
+    );
 
     return () => {
-      google.maps.event.removeListener(listener);
+      google.maps.event.removeListener(clickListener);
     };
   }, [map]);
 
@@ -107,23 +116,19 @@ export default function InterestTargetMode({
             strokeColor: colors.interaction.circle,
             strokeOpacity: CIRCLE_OPACITY * 2,
             strokeWeight: 2,
-            clickable: false,
+            clickable: true,
             zIndex: 10,
+          }}
+          onClick={(e) => {
+            if (e.latLng) {
+              setCurrentCenter({
+                lat: e.latLng.lat(),
+                lng: e.latLng.lng(),
+              });
+            }
           }}
         />
       )}
-
-      {/* Crosshair Overlay */}
-      <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-20">
-        <div className="relative">
-          {/* Horizontal line */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-0.5 bg-red-500 shadow-lg"></div>
-          {/* Vertical line */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-12 bg-red-500 shadow-lg"></div>
-          {/* Center dot */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-red-500 rounded-full shadow-lg"></div>
-        </div>
-      </div>
 
       {/* Control Panel */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
