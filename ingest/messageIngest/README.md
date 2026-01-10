@@ -76,9 +76,13 @@ flowchart TD
 
 ### Geocoding Stage
 
-- **Geocode Addresses** - Convert addresses to coordinates (Google for pins, Overpass for streets)
+Converts extracted locations to map coordinates using three specialized services:
+
+- **Geocode Addresses** - Google API for pins, Overpass API for streets, Cadastre API for УПИ properties
 - **Filter Outliers** - Remove coordinates >1km from others
 - **Store Geocoding** - Save validated coordinates
+
+See [Geocoding System Overview](../../docs/features/geocoding-overview.md) for service details, rate limiting, and configuration.
 
 ### GeoJSON Stage
 

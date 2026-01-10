@@ -13,7 +13,7 @@ This monorepo contains two main components:
 
 ### Ingest Pipeline
 
-Automated crawlers collect notices from public sources (water company, heating provider, municipal sites). AI-powered extraction and geocoding converts raw text into map-ready GeoJSON. The notification engine matches new disruptions with user-defined interest areas and sends push notifications.
+Automated crawlers collect notices from public sources (water company, heating provider, municipal sites). AI-powered extraction and multi-service geocoding (Google, OpenStreetMap, Bulgarian Cadastre) converts raw text into map-ready GeoJSON. The notification engine matches new disruptions with user-defined interest areas and sends push notifications.
 
 See [ingest/](ingest) for details.
 
@@ -36,6 +36,7 @@ See [web/](web) for details.
 ### Features
 
 - [Message Filtering](docs/features/message-filtering.md) - AI-powered content filtering, address extraction, geocoding, and time-based relevance
+- [Geocoding System](docs/features/geocoding-overview.md) - Multi-service geocoding with Google, OpenStreetMap, and Bulgarian Cadastre APIs
 
 ### Pipeline
 

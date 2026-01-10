@@ -133,6 +133,52 @@ flowchart LR
 - **Scripts:** Use the standard template (shebang, dotenv, dynamic imports). Run via `npm run tsx tmp/script.ts`.
 - **Precomputed GeoJSON:** If crawler provides GeoJSON, it bypasses message filtering and extraction stages.
 
+### Geocoding Services
+
+**Hybrid Approach**: Google for pins, Overpass for streets, Cadastre for УПИ.
+
+**Rate Limiting (CRITICAL):**
+
+| Service  | Delay  | Reason                                      |
+| -------- | ------ | ------------------------------------------- |
+| Google   | 200ms  | API pricing/quota                           |
+| Overpass | 500ms  | Fair use (free OSM)                         |
+| Cadastre | 2000ms | Session management + respect government API |
+
+**Routing**: `geocoding-router.ts` dispatches by location type:
+
+- `geocodeAddresses()` → Google (pins with numbers)
+- `geocodeIntersectionsForStreets()` → Overpass (street ∩ street)
+- `geocodeCadastralPropertiesFromIdentifiers()` → Cadastre (УПИ)
+
+**Validation**: All services check `isWithinSofia()` boundary.
+
+**Documentation**: See `docs/features/geocoding-*.md` for service-specific details.
+
+### Documentation Guidelines
+
+**Target Audience**: QA personnel, system administrators, technical stakeholders - NOT developers (they read code).
+
+**Keep Docs Concise**:
+
+- Focus on behavior and operational knowledge
+- Omit implementation details (algorithms, code patterns, TypeScript interfaces)
+- Document "what happens" and "why", not "how it works"
+
+**Avoid Duplication**:
+
+- Link to existing documentation sections instead of repeating content
+- Example: Reference `docs/features/geocoding-overview.md` rather than duplicating service descriptions
+- Maintain single source of truth for each topic
+
+**When to Document**:
+
+- New features affecting QA testing or system operations
+- Configuration changes (environment variables, constants)
+- Edge cases and error conditions
+- External API integrations
+- Pipeline architecture changes
+
 ### Web Components
 
 - **Composition:** Break large components into smaller, focused files (e.g., `SettingsPage.tsx` → `NotificationsSection.tsx`).
