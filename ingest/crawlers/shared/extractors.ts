@@ -72,3 +72,57 @@ export async function extractPostLinks(
   console.log(`📊 Found ${filteredPosts.length} posts on index page`);
   return filteredPosts;
 }
+
+/**
+ * Extract post details from individual post page using CSS selectors
+ * @param page - Playwright page object
+ * @param selectors - CSS selectors for extracting post data
+ * @param unwantedElements - Array of CSS selectors for elements to remove from content (defaults to ["script", "style"])
+ */
+export async function extractPostDetailsGeneric(
+  page: Page,
+  selectors: {
+    TITLE: string;
+    DATE: string;
+    CONTENT: string;
+  },
+  unwantedElements: string[] = ["script", "style"]
+): Promise<{ title: string; dateText: string; contentHtml: string }> {
+  const details = await page.evaluate(
+    ({ selectors, unwantedElements }) => {
+      // Extract title
+      const titleEl = document.querySelector(selectors.TITLE);
+      const title = titleEl?.textContent?.trim() || "";
+
+      // Extract date
+      const dateEl = document.querySelector(selectors.DATE);
+      const dateText = dateEl?.textContent?.trim() || "";
+
+      // Extract main content
+      const contentEl = document.querySelector(selectors.CONTENT);
+
+      let contentHtml = "";
+      if (contentEl) {
+        // Clone the element to avoid modifying the page
+        const clone = contentEl.cloneNode(true) as HTMLElement;
+
+        // Remove unwanted elements
+        const selector = unwantedElements.join(", ");
+        if (selector) {
+          clone.querySelectorAll(selector).forEach((el) => el.remove());
+        }
+
+        contentHtml = clone.innerHTML;
+      }
+
+      return {
+        title,
+        dateText,
+        contentHtml,
+      };
+    },
+    { selectors, unwantedElements }
+  );
+
+  return details;
+}

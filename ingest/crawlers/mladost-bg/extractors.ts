@@ -1,6 +1,7 @@
 import type { Page } from "playwright";
 import type { PostLink } from "./types";
 import { SELECTORS } from "./selectors";
+import { extractPostDetailsGeneric } from "../shared/extractors";
 
 /**
  * Extract post links from the index page
@@ -54,37 +55,5 @@ export async function extractPostLinks(page: Page): Promise<PostLink[]> {
 export async function extractPostDetails(
   page: Page
 ): Promise<{ title: string; dateText: string; contentHtml: string }> {
-  const details = await page.evaluate(() => {
-    // Extract title (mladost.bg uses h2, not h1)
-    const titleEl = document.querySelector("h2, .news-title, h1");
-    const title = titleEl?.textContent?.trim() || "";
-
-    // Extract date/time from detail page if available
-    const dateEl = document.querySelector(".news-date-time, time, .date");
-    const dateText = dateEl?.textContent?.trim() || "";
-
-    // Extract main content - use inclusive selection
-    const contentEl = document.querySelector(
-      ".section-content, article, .entry-content, main"
-    );
-
-    let contentHtml = "";
-    if (contentEl) {
-      // Clone the element to avoid modifying the page
-      const clone = contentEl.cloneNode(true) as HTMLElement;
-
-      // Only exclude absolutely necessary elements (scripts, styles)
-      clone.querySelectorAll("script, style").forEach((el) => el.remove());
-
-      contentHtml = clone.innerHTML;
-    }
-
-    return {
-      title,
-      dateText,
-      contentHtml,
-    };
-  });
-
-  return details;
+  return extractPostDetailsGeneric(page, SELECTORS.POST, ["script", "style"]);
 }

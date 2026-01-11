@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Page } from "playwright";
-import { extractPostLinks, extractPostDetails } from "./extractors";
+import { extractPostLinks, extractPostDetailsGeneric } from "./extractors";
 
 describe("shared/extractors", () => {
   describe("extractPostLinks", () => {
@@ -148,6 +148,88 @@ describe("shared/extractors", () => {
       const result = await extractPostLinks(mockPage, selectors, urlFilter);
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe("extractPostDetailsGeneric", () => {
+    it("should extract post details from page", async () => {
+      const mockDetails = {
+        title: "Test Article",
+        dateText: "15.01.2025",
+        contentHtml: "<p>Article content</p>",
+      };
+
+      const mockPage = {
+        evaluate: vi.fn().mockResolvedValue(mockDetails),
+      } as unknown as Page;
+
+      const selectors = {
+        TITLE: "h1",
+        DATE: ".date",
+        CONTENT: ".content",
+      };
+
+      const result = await extractPostDetailsGeneric(mockPage, selectors);
+
+      expect(result).toEqual(mockDetails);
+      expect(mockPage.evaluate).toHaveBeenCalledWith(expect.any(Function), {
+        selectors,
+        unwantedElements: ["script", "style"],
+      });
+    });
+
+    it("should use custom unwanted elements", async () => {
+      const mockDetails = {
+        title: "Test Article",
+        dateText: "15.01.2025",
+        contentHtml: "<p>Article content</p>",
+      };
+
+      const mockPage = {
+        evaluate: vi.fn().mockResolvedValue(mockDetails),
+      } as unknown as Page;
+
+      const selectors = {
+        TITLE: "h1",
+        DATE: ".date",
+        CONTENT: ".content",
+      };
+
+      const unwantedElements = ["script", "style", "nav", ".social-share"];
+
+      const result = await extractPostDetailsGeneric(
+        mockPage,
+        selectors,
+        unwantedElements
+      );
+
+      expect(result).toEqual(mockDetails);
+      expect(mockPage.evaluate).toHaveBeenCalledWith(expect.any(Function), {
+        selectors,
+        unwantedElements,
+      });
+    });
+
+    it("should return empty strings when elements not found", async () => {
+      const mockDetails = {
+        title: "",
+        dateText: "",
+        contentHtml: "",
+      };
+
+      const mockPage = {
+        evaluate: vi.fn().mockResolvedValue(mockDetails),
+      } as unknown as Page;
+
+      const selectors = {
+        TITLE: "h1",
+        DATE: ".date",
+        CONTENT: ".content",
+      };
+
+      const result = await extractPostDetailsGeneric(mockPage, selectors);
+
+      expect(result).toEqual(mockDetails);
     });
   });
 });
