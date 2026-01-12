@@ -1,6 +1,12 @@
+"use client";
+
+import { useState } from "react";
 import MapComponent from "@/components/MapComponent";
 import AddInterestButton from "@/components/AddInterestButton";
 import AddInterestsPrompt from "@/components/AddInterestsPrompt";
+import GeolocationButton from "@/components/GeolocationButton";
+import GeolocationPrompt from "@/components/GeolocationPrompt";
+import { useGeolocationPrompt } from "@/lib/hooks/useGeolocationPrompt";
 import { Message, Interest } from "@/lib/types";
 
 interface MapContainerProps {
@@ -53,12 +59,43 @@ export default function MapContainer({
   onCancelTargetMode,
   onStartAddInterest,
 }: MapContainerProps) {
+  const [centerMap, setCenterMap] = useState<
+    | ((
+        lat: number,
+        lng: number,
+        zoom?: number,
+        options?: { animate?: boolean }
+      ) => void)
+    | null
+  >(null);
+
+  const { showPrompt, onAccept, onDecline, requestGeolocation, isLocating } =
+    useGeolocationPrompt();
+
+  const handleMapReady = (
+    centerMapFn: (
+      lat: number,
+      lng: number,
+      zoom?: number,
+      options?: { animate?: boolean }
+    ) => void,
+    mapInstance: google.maps.Map | null
+  ) => {
+    setCenterMap(() => centerMapFn);
+    onMapReady(centerMapFn, mapInstance);
+  };
+
+  const handleGeolocationClick = () => {
+    if (centerMap) {
+      requestGeolocation(centerMap);
+    }
+  };
   return (
     <div className="absolute inset-0">
       <MapComponent
         messages={messages}
         onFeatureClick={onFeatureClick}
-        onMapReady={onMapReady}
+        onMapReady={handleMapReady}
         onBoundsChanged={onBoundsChanged}
         interests={interests}
         onInterestClick={onInterestClick}
@@ -88,6 +125,18 @@ export default function MapContainer({
           isUserAuthenticated={!!user}
           visible={!targetMode.active}
         />
+      )}
+
+      {/* Geolocation button - always visible */}
+      <GeolocationButton
+        onClick={handleGeolocationClick}
+        isLocating={isLocating}
+        visible={true}
+      />
+
+      {/* Geolocation permission prompt */}
+      {showPrompt && (
+        <GeolocationPrompt onAccept={onAccept} onDecline={onDecline} />
       )}
     </div>
   );

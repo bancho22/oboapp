@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  useEffect,
+} from "react";
 import { GoogleMap } from "@react-google-maps/api";
 import { Message, Interest } from "@/lib/types";
 import { SOFIA_BOUNDS } from "@/lib/bounds-utils";
@@ -122,6 +128,13 @@ export default function MapComponent({
       },
       minZoom: 12,
       maxZoom: 18,
+      // Enable user location tracking with blue dot
+      zoomControl: true,
+      gestureHandling: "greedy",
+      disableDefaultUI: false,
+      myLocationButtonOptions: {
+        position: google.maps.ControlPosition.TOP_RIGHT,
+      },
     }),
     [initialCenter]
   );
@@ -175,20 +188,21 @@ export default function MapComponent({
     const baseOptions = {
       ...mapOptions,
       center: preservedCenter,
+      disableDefaultUI: true,
+      zoomControl: true,
+      gestureHandling: "greedy" as google.maps.MapOptions["gestureHandling"],
     } as const;
 
     if (targetMode?.active) {
       return {
         ...baseOptions,
-        zoomControl: true,
         scrollwheel: true,
         disableDoubleClickZoom: false,
-        gestureHandling: "greedy" as google.maps.MapOptions["gestureHandling"],
       };
     }
 
     return baseOptions;
-  }, [targetMode?.active]);
+  }, [targetMode?.active, mapOptions]);
 
   const handleCenterChanged = useCallback(() => {
     if (!mapRef.current) return;

@@ -26,6 +26,20 @@ export type AnalyticsEvent =
       name: "notification_permission_declined";
       params: { zones_count: number };
     }
+  // Geolocation
+  | { name: "geolocation_prompt_shown"; params: {} }
+  | { name: "geolocation_prompt_accepted"; params: {} }
+  | { name: "geolocation_prompt_declined"; params: {} }
+  | { name: "geolocation_permission_granted"; params: {} }
+  | { name: "geolocation_permission_denied"; params: {} }
+  | {
+      name: "geolocation_location_centered";
+      params: { had_cached_permission: boolean };
+    }
+  | {
+      name: "geolocation_error";
+      params: { error_type: string; had_cached_permission: boolean };
+    }
   // Prompts
   | { name: "prompt_add_zones_clicked"; params: { prompt_type: "first_zone" } }
   // Content Engagement

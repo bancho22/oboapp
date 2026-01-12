@@ -26,3 +26,26 @@ body {
   height: 100%;
   width: 100%;
 }
+
+/* Custom geolocation loading animation */
+@keyframes geolocation-loading-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(720deg);
+  } /* Fast spin */
+  50% {
+    transform: rotate(1080deg);
+  } /* Slow transition */
+  70% {
+    transform: rotate(1800deg);
+  } /* Fast spin again */
+  100% {
+    transform: rotate(2160deg);
+  } /* Complete cycle */
+}
+
+.animate-geolocation-loading-spin {
+  animation: geolocation-loading-spin 2.5s linear infinite;
+}
