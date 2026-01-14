@@ -9,6 +9,7 @@ import { colors, opacity } from "@/lib/colors";
  * Default GeoJSON styles for different geometry types and states
  */
 export const GEOJSON_STYLES = {
+  // Active (today) styles - Red
   lineString: {
     strokeColor: colors.primary.red,
     strokeOpacity: opacity.default,
@@ -36,6 +37,35 @@ export const GEOJSON_STYLES = {
     fillColor: colors.primary.red,
     fillOpacity: opacity.fillHover,
     zIndex: 6,
+  },
+  // Archived (past 7 days) styles - Grey
+  lineStringArchived: {
+    strokeColor: colors.primary.grey,
+    strokeOpacity: opacity.archivedDefault,
+    strokeWeight: 3,
+    zIndex: 3,
+  },
+  lineStringArchivedHover: {
+    strokeColor: colors.primary.grey,
+    strokeOpacity: opacity.archivedHover,
+    strokeWeight: 4,
+    zIndex: 4,
+  },
+  polygonArchived: {
+    strokeColor: colors.primary.grey,
+    strokeOpacity: opacity.archivedDefault,
+    strokeWeight: 2,
+    fillColor: colors.primary.grey,
+    fillOpacity: opacity.archivedFill,
+    zIndex: 3,
+  },
+  polygonArchivedHover: {
+    strokeColor: colors.primary.grey,
+    strokeOpacity: opacity.archivedHover,
+    strokeWeight: 3,
+    fillColor: colors.primary.grey,
+    fillOpacity: opacity.archivedFillHover,
+    zIndex: 4,
   },
 } as const;
 
@@ -88,19 +118,32 @@ export interface GeometryStyleConfig {
 /**
  * Creates a marker icon configuration
  * @param isHovered - Whether the marker is being hovered over
+ * @param classification - Message classification ("active" or "archived")
  * @param customColors - Optional custom color palette (defaults to app colors)
  * @param customOpacity - Optional custom opacity values (defaults to app opacity)
  * @returns Marker icon configuration
  */
 export function createMarkerIcon(
   isHovered: boolean = false,
+  classification: "active" | "archived" = "active",
   customColors = colors,
   customOpacity = opacity
 ): MarkerIconConfig {
+  const isArchived = classification === "archived";
+  const fillColor = isArchived
+    ? customColors.primary.grey
+    : customColors.primary.red;
+  const baseOpacity = isArchived
+    ? customOpacity.archivedDefault
+    : customOpacity.default;
+  const hoverOpacity = isArchived
+    ? customOpacity.archivedHover
+    : customOpacity.hover;
+
   return {
     path: "M 0,0 m -8,0 a 8,8 0 1,0 16,0 a 8,8 0 1,0 -16,0",
-    fillColor: customColors.primary.red,
-    fillOpacity: isHovered ? customOpacity.hover : customOpacity.default,
+    fillColor,
+    fillOpacity: isHovered ? hoverOpacity : baseOpacity,
     strokeWeight: 2,
     strokeColor: customColors.map.stroke,
     scale: isHovered ? 1.2 : 1,
@@ -110,11 +153,13 @@ export function createMarkerIcon(
 /**
  * Creates a cluster marker icon configuration
  * @param count - Number of markers in the cluster
+ * @param classification - Message classification ("active" or "archived")
  * @param customColors - Optional custom color palette (defaults to app colors)
  * @returns Cluster icon and label configuration
  */
 export function createClusterIcon(
   count: number,
+  classification: "active" | "archived" = "active",
   customColors = colors
 ): { icon: ClusterIconConfig; label: ClusterLabelConfig } {
   // Scale cluster size based on count, with min/max bounds
@@ -126,11 +171,18 @@ export function createClusterIcon(
       ? google.maps.SymbolPath.CIRCLE
       : ("CIRCLE" as any);
 
+  const isArchived = classification === "archived";
+  const fillColor = isArchived
+    ? customColors.primary.grey
+    : customColors.primary.red;
+
+  const fillOpacity = isArchived ? opacity.archivedDefault : opacity.default;
+
   return {
     icon: {
       path: symbolPath,
-      fillColor: customColors.primary.red,
-      fillOpacity: 0.9,
+      fillColor,
+      fillOpacity,
       strokeColor: customColors.map.stroke,
       strokeWeight: 2,
       scale,
@@ -149,22 +201,35 @@ export function createClusterIcon(
  * @param geometryType - Type of geometry ('LineString' or 'Polygon')
  * @param isHovered - Whether the geometry is being hovered over
  * @param isSelected - Whether the geometry is selected
+ * @param classification - Message classification ("active" or "archived")
  * @returns Geometry style configuration
  */
 export function getGeometryStyle(
   geometryType: "LineString" | "Polygon",
   isHovered: boolean = false,
-  isSelected: boolean = false
+  isSelected: boolean = false,
+  classification: "active" | "archived" = "active"
 ): GeometryStyleConfig {
   const useHoverState = isHovered || isSelected;
+  const isArchived = classification === "archived";
 
   if (geometryType === "LineString") {
+    if (isArchived) {
+      return useHoverState
+        ? GEOJSON_STYLES.lineStringArchivedHover
+        : GEOJSON_STYLES.lineStringArchived;
+    }
     return useHoverState
       ? GEOJSON_STYLES.lineStringHover
       : GEOJSON_STYLES.lineString;
   }
 
   if (geometryType === "Polygon") {
+    if (isArchived) {
+      return useHoverState
+        ? GEOJSON_STYLES.polygonArchivedHover
+        : GEOJSON_STYLES.polygonArchived;
+    }
     return useHoverState ? GEOJSON_STYLES.polygonHover : GEOJSON_STYLES.polygon;
   }
 

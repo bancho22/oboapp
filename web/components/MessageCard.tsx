@@ -5,6 +5,7 @@ import { trackEvent } from "@/lib/analytics";
 import { Message } from "@/lib/types";
 import sources from "@/lib/sources.json";
 import { stripMarkdown } from "@/lib/markdown-utils";
+import { classifyMessage } from "@/lib/message-classification";
 
 interface MessageCardProps {
   readonly message: Message;
@@ -39,6 +40,10 @@ export function MessageCardSkeleton() {
 
 export default function MessageCard({ message, onClick }: MessageCardProps) {
   const [logoError, setLogoError] = useState(false);
+
+  // Classify message for status indicator
+  const classification = classifyMessage(message);
+  const isActive = classification === "active";
 
   // Find source info
   const sourceInfo = sources.find((s) => s.id === message.source);
@@ -100,9 +105,16 @@ export default function MessageCard({ message, onClick }: MessageCardProps) {
   return (
     <button
       type="button"
-      className="bg-white rounded-lg shadow-md p-6 border border-neutral-border hover:shadow-lg transition-shadow cursor-pointer w-full text-left"
+      className="bg-white rounded-lg shadow-md p-6 border border-neutral-border hover:shadow-lg transition-shadow cursor-pointer w-full text-left relative"
       onClick={handleClick}
     >
+      {/* Status indicator circle (top-right) */}
+      <div
+        className={`absolute top-3 right-3 w-3 h-3 rounded-full ${
+          isActive ? "bg-destructive" : "bg-neutral"
+        }`}
+      />
+
       <div className="space-y-4">
         {/* Source */}
         <div className="flex items-center space-x-3">

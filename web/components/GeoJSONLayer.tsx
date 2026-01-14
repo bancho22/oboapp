@@ -24,45 +24,55 @@ export default function GeoJSONLayer({
 }: GeoJSONLayerProps) {
   const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
   const [hoveredFeature, setHoveredFeature] = useState<string | null>(null);
-  const [unclusteredFeatures, setUnclusteredFeatures] = useState<Set<string>>(
-    new Set()
-  );
-  const clustererRef = useRef<MarkerClusterer | null>(null);
-  const markersRef = useRef<Map<string, google.maps.Marker>>(new Map());
+  const [unclusteredActiveFeatures, setUnclusteredActiveFeatures] = useState<
+    Set<string>
+  >(new Set());
+  const [unclusteredArchivedFeatures, setUnclusteredArchivedFeatures] =
+    useState<Set<string>>(new Set());
 
-  // Extract all features with centroids
+  // Separate refs for each clusterer
+  const activeClustererRef = useRef<MarkerClusterer | null>(null);
+  const archivedClustererRef = useRef<MarkerClusterer | null>(null);
+  const activeMarkersRef = useRef<Map<string, google.maps.Marker>>(new Map());
+  const archivedMarkersRef = useRef<Map<string, google.maps.Marker>>(new Map());
+
+  // Extract all features with centroids and classification
   const features = extractFeaturesFromMessages(messages);
 
-  // Create and manage markers with clustering
-  useEffect(() => {
-    if (!map) return;
+  // Split features by classification
+  const activeFeatures = features.filter((f) => f.classification === "active");
+  const archivedFeatures = features.filter(
+    (f) => f.classification === "archived"
+  );
 
-    // Clear existing markers and clusterer
-    markersRef.current.forEach((marker) => marker.setMap(null));
-    markersRef.current.clear();
-    if (clustererRef.current) {
-      clustererRef.current.clearMarkers();
-    }
-
-    // Create markers for all features
+  /**
+   * Helper function to create markers for a list of features
+   */
+  const createMarkersForFeatures = (
+    featuresList: FeatureData[],
+    classification: "active" | "archived",
+    markerMap: Map<string, google.maps.Marker>
+  ): google.maps.Marker[] => {
     const markers: google.maps.Marker[] = [];
-    features.forEach((feature) => {
+
+    featuresList.forEach((feature) => {
       const key = createFeatureKey(feature.messageId, feature.featureIndex);
 
       const marker = new google.maps.Marker({
         position: feature.centroid,
         map: null, // Will be managed by clusterer
-        icon: createMarkerIcon(false),
+        icon: createMarkerIcon(false, classification),
         title:
           feature.properties?.address ||
           feature.properties?.street_name ||
           "Маркер",
-        zIndex: 10,
+        zIndex: classification === "active" ? 10 : 5, // Active markers higher
       });
 
       // Store feature data in marker
       (marker as any).featureData = feature;
       (marker as any).featureKey = key;
+      (marker as any).classification = classification;
 
       // Click handler
       marker.addListener("click", () => {
@@ -73,6 +83,7 @@ export default function GeoJSONLayer({
             params: {
               message_id: feature.messageId,
               geometry_type: feature.geometry.type,
+              classification: classification,
             },
           });
           onFeatureClick(feature.messageId);
@@ -82,35 +93,67 @@ export default function GeoJSONLayer({
       // Hover handlers
       marker.addListener("mouseover", () => {
         setHoveredFeature(key);
-        marker.setIcon(createMarkerIcon(true));
+        marker.setIcon(createMarkerIcon(true, classification));
       });
 
       marker.addListener("mouseout", () => {
         setHoveredFeature(null);
-        marker.setIcon(createMarkerIcon(false));
+        marker.setIcon(createMarkerIcon(false, classification));
       });
 
       markers.push(marker);
-      markersRef.current.set(key, marker);
+      markerMap.set(key, marker);
     });
 
-    // Create clusterer with aggressive clustering settings
-    if (markers.length > 0) {
-      const clusterer = new MarkerClusterer({
+    return markers;
+  };
+
+  // Create and manage markers with clustering
+  useEffect(() => {
+    if (!map) return;
+
+    // Clear existing markers and clusterers
+    activeMarkersRef.current.forEach((marker) => marker.setMap(null));
+    archivedMarkersRef.current.forEach((marker) => marker.setMap(null));
+    activeMarkersRef.current.clear();
+    archivedMarkersRef.current.clear();
+    if (activeClustererRef.current) {
+      activeClustererRef.current.clearMarkers();
+    }
+    if (archivedClustererRef.current) {
+      archivedClustererRef.current.clearMarkers();
+    }
+
+    // Create archived markers first (will be rendered below)
+    const archivedMarkers = createMarkersForFeatures(
+      archivedFeatures,
+      "archived",
+      archivedMarkersRef.current
+    );
+
+    // Create active markers second (will be rendered above)
+    const activeMarkers = createMarkersForFeatures(
+      activeFeatures,
+      "active",
+      activeMarkersRef.current
+    );
+
+    // Create archived clusterer FIRST (lower z-index)
+    if (archivedMarkers.length > 0) {
+      const archivedClusterer = new MarkerClusterer({
         map: map,
-        markers,
+        markers: archivedMarkers,
         algorithmOptions: {
           maxZoom: 17, // Cluster until zoom level 17
         },
         renderer: {
           render: ({ count, position, markers: clusterMarkers }) => {
-            // When rendering, track which markers are in this cluster
+            // Track which markers are in this cluster
             if (count > 1) {
-              // This is a real cluster - hide full geometry for these features
               clusterMarkers?.forEach((marker) => {
                 const key = (marker as any).featureKey;
                 if (key) {
-                  setUnclusteredFeatures((prev) => {
+                  setUnclusteredArchivedFeatures((prev) => {
                     const next = new Set(prev);
                     next.delete(key);
                     return next;
@@ -119,43 +162,135 @@ export default function GeoJSONLayer({
               });
             }
 
-            // Create red cluster marker matching our pin color
-            const { icon, label } = createClusterIcon(count);
-            return new google.maps.Marker({
+            // Create grey cluster marker
+            const { icon, label } = createClusterIcon(count, "archived");
+            const clusterMarker = new google.maps.Marker({
               position,
               icon,
               label,
-              zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
+              zIndex: 1 + count, // Lower z-index: below all pins but above geometry
             });
+
+            // Add click handler for analytics and zoom
+            clusterMarker.addListener("click", () => {
+              trackEvent({
+                name: "map_cluster_clicked",
+                params: {
+                  classification: "archived",
+                },
+              });
+              if (map) {
+                map.setZoom((map.getZoom() || 0) + 1);
+              }
+            });
+
+            return clusterMarker;
           },
         },
       });
 
-      clustererRef.current = clusterer;
+      archivedClustererRef.current = archivedClusterer;
 
-      // Initialize all features as unclustered, then renderer will remove clustered ones
-      const allKeys = new Set(markersRef.current.keys());
-      setUnclusteredFeatures(allKeys);
-
-      // Listen to map zoom/bounds changes to update unclustered state
-      const updateUnclusteredState = () => {
-        setTimeout(() => {
-          const allKeys = new Set(markersRef.current.keys());
-          setUnclusteredFeatures(allKeys);
-        }, 100); // Small delay to let clusterer finish rendering
-      };
-
-      map.addListener("zoom_changed", updateUnclusteredState);
-      map.addListener("bounds_changed", updateUnclusteredState);
+      // Initialize all archived features as unclustered
+      const allArchivedKeys = new Set(archivedMarkersRef.current.keys());
+      setUnclusteredArchivedFeatures(allArchivedKeys);
     }
+
+    // Create active clusterer SECOND (higher z-index)
+    if (activeMarkers.length > 0) {
+      const activeClusterer = new MarkerClusterer({
+        map: map,
+        markers: activeMarkers,
+        algorithmOptions: {
+          maxZoom: 17, // Cluster until zoom level 17
+        },
+        renderer: {
+          render: ({ count, position, markers: clusterMarkers }) => {
+            // Track which markers are in this cluster
+            if (count > 1) {
+              clusterMarkers?.forEach((marker) => {
+                const key = (marker as any).featureKey;
+                if (key) {
+                  setUnclusteredActiveFeatures((prev) => {
+                    const next = new Set(prev);
+                    next.delete(key);
+                    return next;
+                  });
+                }
+              });
+            }
+
+            // Create red cluster marker
+            const { icon, label } = createClusterIcon(count, "active");
+            const clusterMarker = new google.maps.Marker({
+              position,
+              icon,
+              label,
+              zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count, // Higher base z-index
+            });
+
+            // Add click handler for analytics and zoom
+            clusterMarker.addListener("click", () => {
+              trackEvent({
+                name: "map_cluster_clicked",
+                params: {
+                  classification: "active",
+                },
+              });
+              map.setZoom((map.getZoom() || 0) + 1);
+            });
+
+            // Add click handler for analytics and zoom
+            clusterMarker.addListener("click", () => {
+              trackEvent({
+                name: "map_cluster_clicked",
+                params: {
+                  classification: "active",
+                },
+              });
+              if (map) {
+                map.setZoom((map.getZoom() || 0) + 1);
+              }
+            });
+
+            return clusterMarker;
+          },
+        },
+      });
+
+      activeClustererRef.current = activeClusterer;
+
+      // Initialize all active features as unclustered
+      const allActiveKeys = new Set(activeMarkersRef.current.keys());
+      setUnclusteredActiveFeatures(allActiveKeys);
+    }
+
+    // Listen to map zoom/bounds changes to update unclustered state
+    const updateUnclusteredState = () => {
+      setTimeout(() => {
+        const allActiveKeys = new Set(activeMarkersRef.current.keys());
+        const allArchivedKeys = new Set(archivedMarkersRef.current.keys());
+        setUnclusteredActiveFeatures(allActiveKeys);
+        setUnclusteredArchivedFeatures(allArchivedKeys);
+      }, 100); // Small delay to let clusterer finish rendering
+    };
+
+    map.addListener("zoom_changed", updateUnclusteredState);
+    map.addListener("bounds_changed", updateUnclusteredState);
 
     return () => {
       // Cleanup
-      markersRef.current.forEach((marker) => marker.setMap(null));
-      markersRef.current.clear();
-      if (clustererRef.current) {
-        clustererRef.current.clearMarkers();
-        clustererRef.current = null;
+      activeMarkersRef.current.forEach((marker) => marker.setMap(null));
+      archivedMarkersRef.current.forEach((marker) => marker.setMap(null));
+      activeMarkersRef.current.clear();
+      archivedMarkersRef.current.clear();
+      if (activeClustererRef.current) {
+        activeClustererRef.current.clearMarkers();
+        activeClustererRef.current = null;
+      }
+      if (archivedClustererRef.current) {
+        archivedClustererRef.current.clearMarkers();
+        archivedClustererRef.current = null;
       }
     };
   }, [messages, onFeatureClick, map]);
@@ -169,7 +304,11 @@ export default function GeoJSONLayer({
       selectedFeature={selectedFeature}
       hoveredFeature={hoveredFeature}
       shouldShowFullGeometry={shouldShowFullGeometry}
-      unclusteredFeatures={unclusteredFeatures}
+      unclusteredActiveFeatures={unclusteredActiveFeatures}
+      unclusteredArchivedFeatures={unclusteredArchivedFeatures}
+      onFeatureClick={onFeatureClick}
+      setSelectedFeature={setSelectedFeature}
+      setHoveredFeature={setHoveredFeature}
     />
   );
 }

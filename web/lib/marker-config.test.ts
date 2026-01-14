@@ -71,10 +71,10 @@ describe("marker-config", () => {
 
     it("should accept custom colors", () => {
       const customColors = {
-        primary: { red: "#FF0000" },
+        primary: { red: "#FF0000", grey: "#808080" },
         map: { stroke: "#000000" },
       };
-      const config = createMarkerIcon(false, customColors as any);
+      const config = createMarkerIcon(false, "active", customColors as any);
 
       expect(config.fillColor).toBe("#FF0000");
       expect(config.strokeColor).toBe("#000000");
@@ -88,10 +88,16 @@ describe("marker-config", () => {
 
       const normalConfig = createMarkerIcon(
         false,
+        "active",
         colors,
         customOpacity as any
       );
-      const hoverConfig = createMarkerIcon(true, colors, customOpacity as any);
+      const hoverConfig = createMarkerIcon(
+        true,
+        "active",
+        colors,
+        customOpacity as any
+      );
 
       expect(normalConfig.fillOpacity).toBe(0.5);
       expect(hoverConfig.fillOpacity).toBe(0.9);
@@ -105,7 +111,7 @@ describe("marker-config", () => {
       expect(icon).toMatchObject({
         path: "CIRCLE", // Fallback string in test environment
         fillColor: colors.primary.red,
-        fillOpacity: 0.9,
+        fillOpacity: 0.8,
         strokeColor: colors.map.stroke,
         strokeWeight: 2,
         scale: 16.5, // 15 + 3/2
@@ -136,11 +142,11 @@ describe("marker-config", () => {
 
     it("should accept custom colors", () => {
       const customColors = {
-        primary: { red: "#00FF00" },
+        primary: { red: "#00FF00", grey: "#808080" },
         map: { stroke: "#111111" },
       };
 
-      const { icon } = createClusterIcon(5, customColors as any);
+      const { icon } = createClusterIcon(5, "active", customColors as any);
 
       expect(icon.fillColor).toBe("#00FF00");
       expect(icon.strokeColor).toBe("#111111");

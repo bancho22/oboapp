@@ -59,6 +59,13 @@ export type AnalyticsEvent =
       params: {
         message_id: string;
         geometry_type: "Point" | "LineString" | "Polygon";
+        classification: "active" | "archived";
+      };
+    }
+  | {
+      name: "map_cluster_clicked";
+      params: {
+        classification: "active" | "archived";
       };
     }
   | {

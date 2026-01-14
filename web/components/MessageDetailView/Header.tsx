@@ -1,16 +1,19 @@
 import React from "react";
 import { trackEvent } from "@/lib/analytics";
+import { MessageClassification } from "@/lib/message-classification";
 
 interface HeaderProps {
   handlers: Record<string, any>;
   onClose: () => void;
   messageId?: string;
+  classification?: MessageClassification;
 }
 
 export default function Header({
   handlers,
   onClose,
   messageId = "unknown",
+  classification = "archived",
 }: HeaderProps) {
   const handleClose = () => {
     trackEvent({
@@ -23,6 +26,8 @@ export default function Header({
     onClose();
   };
 
+  const isActive = classification === "active";
+
   return (
     <div className="sticky top-0 bg-white border-b border-neutral-border px-4 sm:px-6 py-4 flex items-center justify-between shadow-sm z-10">
       <button
@@ -33,7 +38,13 @@ export default function Header({
         aria-label="Плъзни, за да затвориш, или натисни, за да затвориш"
       />
 
-      <h2 className="text-lg sm:text-xl font-semibold text-foreground pt-3 sm:pt-0">
+      <h2 className="text-lg sm:text-xl font-semibold text-foreground pt-3 sm:pt-0 flex items-center gap-2">
+        <div
+          className={`w-3 h-3 rounded-full ${
+            isActive ? "bg-destructive" : "bg-neutral"
+          }`}
+          title={isActive ? "Активно днес" : "Архивирано"}
+        />
         Детайли за сигнала
       </h2>
       <button

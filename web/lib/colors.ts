@@ -14,6 +14,10 @@ export const colors = {
     blue: "#5DADE2",
     /** Dark blue for header background */
     blueDark: "#2c3e50",
+    /** Grey for archived markers and messages */
+    grey: "#6B7280",
+    /** Darker grey for hover states on archived markers */
+    greyDark: "#4B5563",
   },
 
   // Interaction colors
@@ -94,6 +98,14 @@ export const opacity = {
   fill: 0.2,
   /** Fill opacity for polygons on hover */
   fillHover: 0.35,
+  /** Default opacity for archived messages (more transparent) */
+  archivedDefault: 0.6,
+  /** Hover opacity for archived messages */
+  archivedHover: 0.8,
+  /** Fill opacity for archived polygons */
+  archivedFill: 0.15,
+  /** Fill opacity for archived polygons on hover */
+  archivedFillHover: 0.25,
 } as const;
 
 /**

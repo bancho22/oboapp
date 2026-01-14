@@ -92,6 +92,7 @@ describe("feature-utils", () => {
           lat: 42.6977,
           lng: 23.3219,
         },
+        classification: "archived",
       });
 
       // Check second feature (LineString)
@@ -112,6 +113,7 @@ describe("feature-utils", () => {
           lat: expect.any(Number),
           lng: expect.any(Number),
         }),
+        classification: "archived",
       });
 
       // Check third feature (Polygon)
@@ -137,6 +139,7 @@ describe("feature-utils", () => {
           lat: expect.any(Number),
           lng: expect.any(Number),
         }),
+        classification: "archived",
       });
     });
 
@@ -321,6 +324,7 @@ describe("feature-utils", () => {
         },
         properties: { address: "Address 1" },
         centroid: { lat: 42.6977, lng: 23.3219 },
+        classification: "archived" as const,
       },
       {
         messageId: "msg1",
@@ -331,6 +335,7 @@ describe("feature-utils", () => {
         },
         properties: { address: "Address 2" },
         centroid: { lat: 42.6987, lng: 23.3229 },
+        classification: "archived" as const,
       },
       {
         messageId: "msg2",
@@ -344,6 +349,7 @@ describe("feature-utils", () => {
         },
         properties: { street_name: "Street 1" },
         centroid: { lat: 42.6982, lng: 23.3224 },
+        classification: "archived" as const,
       },
     ];
 

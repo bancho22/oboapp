@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { trackEvent } from "@/lib/analytics";
 import { Message } from "@/lib/types";
+import { classifyMessage } from "@/lib/message-classification";
 import { useDragToClose } from "@/lib/hooks/useDragToClose";
 import Header from "./Header";
 import SourceDisplay from "./Source";
@@ -126,7 +127,12 @@ export default function MessageDetailView({
           transition: isDragging ? "none" : undefined,
         }}
       >
-        <Header handlers={handlers} onClose={onClose} messageId={message.id} />
+        <Header
+          handlers={handlers}
+          onClose={onClose}
+          messageId={message.id}
+          classification={classifyMessage(message)}
+        />
 
         <div
           className={`px-4 sm:px-6 py-4 pb-6 sm:pb-4 space-y-6 transition-opacity duration-500 delay-100 ${

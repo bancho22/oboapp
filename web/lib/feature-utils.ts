@@ -1,5 +1,7 @@
 import { Message, GeoJSONGeometry } from "@/lib/types";
 import { getCentroid, createFeatureKey } from "@/lib/geometry-utils";
+import { classifyMessage } from "@/lib/message-classification";
+import type { MessageClassification } from "@/lib/message-classification";
 
 /**
  * Represents a processed feature with its metadata and geometry
@@ -10,13 +12,14 @@ export interface FeatureData {
   geometry: GeoJSONGeometry;
   properties: Record<string, any>;
   centroid: { lat: number; lng: number };
+  classification: MessageClassification;
 }
 
 /**
  * Extract all features with centroids from an array of messages
  *
  * @param messages - Array of messages to process
- * @returns Array of FeatureData with valid centroids
+ * @returns Array of FeatureData with valid centroids and classification
  */
 export function extractFeaturesFromMessages(
   messages: Message[]
@@ -31,6 +34,9 @@ export function extractFeaturesFromMessages(
     if (!message?.geoJson?.features) {
       return;
     }
+
+    // Classify message once per message (not per feature)
+    const classification = classifyMessage(message);
 
     message.geoJson.features.forEach((feature, featureIndex) => {
       if (!feature?.geometry) {
@@ -48,6 +54,7 @@ export function extractFeaturesFromMessages(
         geometry: feature.geometry,
         properties: feature.properties || {},
         centroid,
+        classification,
       });
     });
   });
