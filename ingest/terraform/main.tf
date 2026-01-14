@@ -70,11 +70,7 @@ resource "google_artifact_registry_repository" "ingest" {
     condition {
       tag_state    = "TAGGED"
       tag_prefixes = ["latest"]
-      older_than   = "0s"
-    }
-    
-    most_recent_versions {
-      keep_count = 1  # Keep only 1 version of each tag
+      older_than   = "86400s"  # Delete older versions after 1 day
     }
   }
   
