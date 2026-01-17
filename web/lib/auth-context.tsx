@@ -69,6 +69,20 @@ export function AuthProvider({
 
   const signOut = async () => {
     try {
+      // Unsubscribe from push notifications before signing out
+      if (user) {
+        try {
+          const idToken = await user.getIdToken();
+          const { unsubscribeOnSignOut } = await import(
+            "./notification-service"
+          );
+          await unsubscribeOnSignOut(user.uid, idToken);
+        } catch (notifError) {
+          // Don't block sign-out if notification cleanup fails
+          console.error("Error cleaning up notifications:", notifError);
+        }
+      }
+
       await firebaseSignOut(auth);
     } catch (error) {
       console.error("Error signing out:", error);

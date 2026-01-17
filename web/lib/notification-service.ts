@@ -3,9 +3,9 @@
 import {
   getMessaging,
   getToken,
-  onMessage,
   Messaging,
   isSupported,
+  deleteToken,
 } from "firebase/messaging";
 import { app } from "./firebase";
 import { NotificationSubscription } from "./types";
@@ -93,7 +93,7 @@ function markExplicitUnsubscribe(userId: string): void {
   if (typeof globalThis.localStorage !== "undefined") {
     globalThis.localStorage.setItem(
       `notif_unsubscribed_${userId}`,
-      Date.now().toString()
+      Date.now().toString(),
     );
   }
 }
@@ -107,7 +107,7 @@ function hasExplicitlyUnsubscribed(userId: string): boolean {
   }
 
   const unsubscribedAt = globalThis.localStorage.getItem(
-    `notif_unsubscribed_${userId}`
+    `notif_unsubscribed_${userId}`,
   );
   if (!unsubscribedAt) {
     return false;
@@ -137,7 +137,7 @@ export { markExplicitUnsubscribe };
  */
 export async function hasValidSubscription(
   userId: string,
-  idToken: string
+  idToken: string,
 ): Promise<boolean> {
   try {
     const response = await fetch("/api/notifications/subscription", {
@@ -169,7 +169,7 @@ export async function hasValidSubscription(
  */
 export async function subscribeToPushNotifications(
   userId: string,
-  idToken: string
+  idToken: string,
 ): Promise<NotificationSubscription | null> {
   // Check if messaging is supported
   const supported = await isMessagingSupported();
@@ -233,13 +233,95 @@ export async function subscribeToPushNotifications(
 }
 
 /**
+ * Remove subscription from backend
+ * Separated for better testability and error handling
+ * Exported for testing purposes
+ */
+export async function removeSubscriptionFromBackend(
+  token: string,
+  idToken: string,
+): Promise<boolean> {
+  try {
+    const response = await fetch(
+      `/api/notifications/subscription?token=${encodeURIComponent(token)}`,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      console.error("Failed to remove subscription from backend");
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error removing subscription from backend:", error);
+    return false;
+  }
+}
+
+/**
+ * Unsubscribe from push notifications on sign out
+ * Removes the FCM token from backend and deletes it from Firebase
+ */
+export async function unsubscribeOnSignOut(
+  userId: string,
+  idToken: string,
+): Promise<void> {
+  // Check if messaging is supported
+  const supported = await isMessagingSupported();
+  if (!supported) {
+    console.warn("Firebase Messaging is not supported on this platform");
+    return;
+  }
+
+  if (!messaging) {
+    console.warn("Firebase Messaging not initialized");
+    return;
+  }
+
+  // Get VAPID key
+  const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+  if (!vapidKey) {
+    console.error("VAPID key not configured");
+    return;
+  }
+
+  try {
+    // Get the current FCM token
+    const token = await getToken(messaging, { vapidKey });
+    if (!token) {
+      console.warn("No registration token available to delete");
+      return;
+    }
+
+    // Remove token from backend (non-blocking - best effort)
+    await removeSubscriptionFromBackend(token, idToken);
+
+    // Delete the FCM token from Firebase to invalidate it
+    await deleteToken(messaging);
+    console.log("FCM token deleted successfully");
+
+    // Mark as explicitly unsubscribed
+    markExplicitUnsubscribe(userId);
+  } catch (error) {
+    console.error("Error unsubscribing on sign out:", error);
+  }
+}
+
+/**
  * Check and request notification permission when user has circles
  */
 export async function ensureNotificationPermission(
   userId: string,
   idToken: string,
   hasCircles: boolean,
-  showPrompt?: (onAccept: () => void, onDecline: () => void) => void
+  showPrompt?: (onAccept: () => void, onDecline: () => void) => void,
 ): Promise<void> {
   // Only proceed if user has circles
   if (!hasCircles) {
@@ -280,7 +362,7 @@ export async function ensureNotificationPermission(
       },
       () => {
         // User declined
-      }
+      },
     );
   } else {
     // Fallback: request permission directly
