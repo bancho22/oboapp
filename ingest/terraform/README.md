@@ -93,7 +93,7 @@ gcloud auth configure-docker europe-west1-docker.pkg.dev
 gcloud builds submit --tag europe-west1-docker.pkg.dev/my-project/oborishte-ingest/oborishte-ingest:latest
 ```
 
-**Automatic Cleanup:** The repository has cleanup policies that keep only the latest version and remove untagged images after 1 day.
+**Automatic Cleanup:** The repository keeps the `latest` tag indefinitely and removes untagged images after 1 day.
 
 ### 6. Verify Deployment
 

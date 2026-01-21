@@ -64,17 +64,6 @@ resource "google_artifact_registry_repository" "ingest" {
   format        = "DOCKER"
 
   cleanup_policies {
-    id     = "keep-latest-only"
-    action = "DELETE"
-    
-    condition {
-      tag_state    = "TAGGED"
-      tag_prefixes = ["latest"]
-      older_than   = "86400s"  # Delete older versions after 1 day
-    }
-  }
-  
-  cleanup_policies {
     id     = "delete-untagged"
     action = "DELETE"
     
