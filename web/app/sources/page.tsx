@@ -18,7 +18,7 @@ export default function SourcesPage() {
         <div className="mb-6">
           <Link
             href="/"
-            className="text-primary hover:text-primary-hover flex items-center gap-2"
+            className="text-primary hover:text-primary-hover inline-flex items-center gap-2"
           >
             <span>←</span>
             <span>Начало</span>

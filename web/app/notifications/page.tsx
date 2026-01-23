@@ -11,7 +11,7 @@ export default function NotificationsPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [historyItems, setHistoryItems] = useState<NotificationHistoryItem[]>(
-    []
+    [],
   );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +59,7 @@ export default function NotificationsPage() {
           <div className="mb-6">
             <Link
               href="/settings"
-              className="text-primary hover:text-primary-hover flex items-center gap-2"
+              className="text-primary hover:text-primary-hover inline-flex items-center gap-2"
             >
               <span>←</span>
               <span>Обратно към настройките</span>
@@ -82,7 +82,7 @@ export default function NotificationsPage() {
         <div className="mb-6">
           <Link
             href="/settings"
-            className="text-primary hover:text-primary-hover flex items-center gap-2"
+            className="text-primary hover:text-primary-hover inline-flex items-center gap-2"
           >
             <span>←</span>
             <span>Обратно към настройките</span>

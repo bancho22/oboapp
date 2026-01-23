@@ -105,7 +105,7 @@ export default function SourcePage() {
         <div className="mb-6">
           <Link
             href="/sources"
-            className="text-primary hover:text-primary-hover flex items-center gap-2"
+            className="text-primary hover:text-primary-hover inline-flex items-center gap-2"
           >
             <span>←</span>
             <span>Всички източници</span>
