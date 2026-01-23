@@ -108,22 +108,38 @@ async function fetchSources(
   return sources;
 }
 
-async function isAlreadyIngested(
+async function getAlreadyIngestedSet(
   adminDb: Firestore,
-  sourceUrl: string,
-): Promise<boolean> {
-  // Import encodeDocumentId to generate consistent source document ID
+  sources: SourceDocument[],
+): Promise<Set<string>> {
+  if (sources.length === 0) {
+    return new Set();
+  }
+
   const { encodeDocumentId } = await import("../crawlers/shared/firestore");
-  const sourceDocumentId = encodeDocumentId(sourceUrl);
+  const sourceDocumentIds = sources.map((s) => encodeDocumentId(s.url));
 
-  // Check if any messages exist with this sourceDocumentId
-  const messagesSnapshot = await adminDb
-    .collection("messages")
-    .where("sourceDocumentId", "==", sourceDocumentId)
-    .limit(1)
-    .get();
+  // Firestore 'in' queries support up to 30 values, so we need to batch
+  const BATCH_SIZE = 30;
+  const alreadyIngestedIds = new Set<string>();
 
-  return !messagesSnapshot.empty;
+  for (let i = 0; i < sourceDocumentIds.length; i += BATCH_SIZE) {
+    const batch = sourceDocumentIds.slice(i, i + BATCH_SIZE);
+    const messagesSnapshot = await adminDb
+      .collection("messages")
+      .where("sourceDocumentId", "in", batch)
+      .select("sourceDocumentId") // Only fetch the field we need
+      .get();
+
+    for (const doc of messagesSnapshot.docs) {
+      const sourceDocId = doc.data().sourceDocumentId;
+      if (sourceDocId) {
+        alreadyIngestedIds.add(sourceDocId);
+      }
+    }
+  }
+
+  return alreadyIngestedIds;
 }
 
 async function ingestSource(
@@ -131,16 +147,11 @@ async function ingestSource(
   adminDb: Firestore,
   dryRun: boolean,
   boundaries: GeoJSONFeatureCollection | null,
+  sourceDocumentId: string,
 ): Promise<boolean> {
   if (dryRun) {
     console.log(`   📝 [dry-run] Would ingest: ${source.title}`);
     return true;
-  }
-
-  // Check if already ingested
-  const alreadyIngested = await isAlreadyIngested(adminDb, source.url);
-  if (alreadyIngested) {
-    return false;
   }
 
   // Prominent message header
@@ -321,30 +332,44 @@ export async function ingest(
     boundaries,
   );
 
+  // Batch-check which sources are already ingested (avoids 1371 sequential DB queries!)
+  const { encodeDocumentId } = await import("../crawlers/shared/firestore");
+  const alreadyIngestedSet = await getAlreadyIngestedSet(adminDb, withinBounds);
+  const sourcesToIngest = withinBounds.filter(
+    (s) => !alreadyIngestedSet.has(encodeDocumentId(s.url)),
+  );
+  const alreadyIngestedCount = withinBounds.length - sourcesToIngest.length;
+
+  if (alreadyIngestedCount > 0) {
+    console.log(
+      `✅ Skipping ${alreadyIngestedCount} already-ingested source(s)`,
+    );
+  }
+
   const summary: IngestSummary = {
     total: allSources.length,
     tooOld,
     withinBounds: withinBounds.length,
     outsideBounds,
     ingested: 0,
-    alreadyIngested: 0,
+    alreadyIngested: alreadyIngestedCount,
     filtered: 0,
     failed: 0,
     errors: [],
   };
 
-  for (const source of withinBounds) {
+  for (const source of sourcesToIngest) {
+    const sourceDocumentId = encodeDocumentId(source.url);
     try {
       const wasIngested = await ingestSource(
         source,
         adminDb,
         options.dryRun ?? false,
         boundaries,
+        sourceDocumentId,
       );
       if (wasIngested) {
         summary.ingested++;
-      } else {
-        summary.alreadyIngested++;
       }
     } catch (error) {
       summary.failed++;
