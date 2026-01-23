@@ -9,10 +9,11 @@ interface Props {
 export async function generateMetadata({
   params,
 }: {
-  params: { sourceId: string };
+  params: Promise<{ sourceId: string }>;
 }): Promise<Metadata> {
+  const { sourceId } = await params;
   const source = (sourcesData as SourceConfig[]).find(
-    (s) => s.id === params.sourceId,
+    (s) => s.id === sourceId,
   );
 
   if (!source) {
