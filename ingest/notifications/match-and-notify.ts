@@ -380,7 +380,7 @@ async function sendPushNotification(
     await messaging.send({
       token: subscription.token,
       data: {
-        title: "Ново съобщение в Оборище",
+        title: "Ново съобщение в OboApp",
         body: `${messagePreview}${distanceText}`,
         icon: `${APP_URL}/icon-192x192.png`,
         badge: `${APP_URL}/icon-72x72.png`,
