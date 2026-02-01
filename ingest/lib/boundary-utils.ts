@@ -1,31 +1,43 @@
 import * as turf from "@turf/turf";
+import type { Feature } from "geojson";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { GeoJSONFeatureCollection } from "./types";
+import type { GeoJSONFeatureCollection, GeoJSONFeature } from "./types";
 
-let cachedBoundary: GeoJSONFeatureCollection | null = null;
+// Cache boundaries by absolute path to avoid re-reading files
+const boundaryCache = new Map<string, GeoJSONFeatureCollection>();
 
 /**
  * Load optional geographic boundaries from a GeoJSON file for filtering.
  * If no path is provided, all sources will be processed.
+ * Results are cached to avoid re-reading files.
  */
 export function loadBoundaries(
-  boundariesPath?: string
+  boundariesPath?: string,
 ): GeoJSONFeatureCollection | null {
   if (!boundariesPath) {
     return null;
   }
 
+  const absolutePath = resolve(process.cwd(), boundariesPath);
+
+  // Check cache first
+  if (boundaryCache.has(absolutePath)) {
+    return boundaryCache.get(absolutePath)!;
+  }
+
   try {
-    const absolutePath = resolve(process.cwd(), boundariesPath);
     const content = readFileSync(absolutePath, "utf-8");
     const geojson = JSON.parse(content) as GeoJSONFeatureCollection;
+
+    // Cache the result
+    boundaryCache.set(absolutePath, geojson);
 
     return geojson;
   } catch (error) {
     console.error(
       `❌ Failed to load boundaries from ${boundariesPath}:`,
-      error
+      error,
     );
     throw error;
   }
@@ -35,10 +47,10 @@ export function loadBoundaries(
  * Check if bounding boxes overlap (fallback method)
  */
 function checkBoundingBoxOverlap(
-  turfFeature: any,
-  turfBoundary: any,
+  turfFeature: Feature,
+  turfBoundary: Feature,
   geometryType: string,
-  originalError: unknown
+  originalError: unknown,
 ): boolean {
   try {
     const featureBbox = turf.bbox(turfFeature);
@@ -67,7 +79,7 @@ function checkBoundingBoxOverlap(
     const bboxErrorMessage =
       error instanceof Error ? error.message : String(error);
     console.warn(
-      `⚠️  Could not check geometry intersection (${errorMessage}), bbox check also failed (${bboxErrorMessage}), including by default`
+      `⚠️  Could not check geometry intersection (${errorMessage}), bbox check also failed (${bboxErrorMessage}), including by default`,
     );
     return true;
   }
@@ -77,15 +89,15 @@ function checkBoundingBoxOverlap(
  * Check if a feature intersects with any boundary feature
  */
 export function checkFeatureIntersection(
-  feature: any,
-  boundaries: GeoJSONFeatureCollection
+  feature: GeoJSONFeature,
+  boundaries: GeoJSONFeatureCollection,
 ): boolean {
   const turfFeature = turf.feature(feature.geometry, feature.properties);
 
   for (const boundaryFeature of boundaries.features) {
     const turfBoundary = turf.feature(
       boundaryFeature.geometry,
-      boundaryFeature.properties
+      boundaryFeature.properties,
     );
 
     try {
@@ -105,7 +117,7 @@ export function checkFeatureIntersection(
           turfFeature,
           turfBoundary,
           feature.geometry.type,
-          intersectError
+          intersectError,
         )
       ) {
         return true;
@@ -123,7 +135,7 @@ export function checkFeatureIntersection(
  */
 export function filterFeaturesByBoundaries(
   sourceGeoJson: GeoJSONFeatureCollection | null,
-  boundaries: GeoJSONFeatureCollection
+  boundaries: GeoJSONFeatureCollection,
 ): GeoJSONFeatureCollection | null {
   if (!sourceGeoJson?.features || sourceGeoJson.features.length === 0) {
     return null;
@@ -153,7 +165,7 @@ export function filterFeaturesByBoundaries(
  */
 export function isWithinBoundaries(
   sourceGeoJson: GeoJSONFeatureCollection,
-  boundaries: GeoJSONFeatureCollection
+  boundaries: GeoJSONFeatureCollection,
 ): boolean {
   try {
     // Check if any feature in source intersects with boundaries

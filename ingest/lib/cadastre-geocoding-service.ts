@@ -10,13 +10,13 @@ const DELAY_BETWEEN_REQUESTS = 2000; // 2 seconds matching other crawlers
 // Source: https://epsg.io/7801
 proj4.defs(
   "EPSG:7801",
-  "+proj=lcc +lat_0=42.6678756833333 +lon_0=25.5 +lat_1=42 +lat_2=43.3333333333333 +x_0=500000 +y_0=4725824.3591 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs"
+  "+proj=lcc +lat_0=42.6678756833333 +lon_0=25.5 +lat_1=42 +lat_2=43.3333333333333 +x_0=500000 +y_0=4725824.3591 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs",
 );
 
 // Define Zone 34 for reference (not typically used by cadastre)
 proj4.defs(
   "EPSG:7802",
-  "+proj=utm +zone=34 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs"
+  "+proj=utm +zone=34 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs",
 );
 
 interface CadastreSession {
@@ -47,7 +47,7 @@ interface CadastreGeometryResponse {
     cadnum: string;
     xc: number;
     yc: number;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
@@ -69,7 +69,7 @@ async function initializeSession(): Promise<CadastreSession> {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
       },
-    }
+    },
   );
 
   // Parse cookies
@@ -87,7 +87,7 @@ async function initializeSession(): Promise<CadastreSession> {
   // Extract CSRF token from HTML
   const html = await mainPageResponse.text();
   const csrfMatch = html.match(
-    /name="__RequestVerificationToken".*?value="([^"]+)"/
+    /name="__RequestVerificationToken".*?value="([^"]+)"/,
   );
   if (!csrfMatch) {
     throw new Error("Failed to extract CSRF token from cadastre main page");
@@ -104,7 +104,7 @@ async function initializeSession(): Promise<CadastreSession> {
  */
 async function fastSearch(
   session: CadastreSession,
-  identifier: string
+  identifier: string,
 ): Promise<void> {
   const searchUrl = `https://kais.cadastre.bg/bg/Map/FastSearch?KeyWords=${identifier}&ServiceObjectHash=&LimitSearchExtent=false&LimitResultCount=true&LimitResultCount=false&X-Requested-With=XMLHttpRequest&_=${Date.now()}`;
 
@@ -125,7 +125,7 @@ async function fastSearch(
 
   if (response.status !== 200) {
     throw new Error(
-      `FastSearch failed with status ${response.status} for ${identifier}`
+      `FastSearch failed with status ${response.status} for ${identifier}`,
     );
   }
 
@@ -146,7 +146,7 @@ async function fastSearch(
  * Step 2: ReadFoundObjects - Get search results
  */
 async function readFoundObjects(
-  session: CadastreSession
+  session: CadastreSession,
 ): Promise<CadastreSearchResult | null> {
   const cookieString = Array.from(session.cookies.entries())
     .map(([k, v]) => `${k}=${v}`)
@@ -167,7 +167,7 @@ async function readFoundObjects(
         Cookie: cookieString,
       },
       body: "sort=&page=1&pageSize=10&group=&filter=",
-    }
+    },
   );
 
   if (response.status !== 200) {
@@ -188,7 +188,7 @@ async function readFoundObjects(
  */
 async function getGeometry(
   session: CadastreSession,
-  searchResult: CadastreSearchResult
+  searchResult: CadastreSearchResult,
 ): Promise<CadastreGeometryResponse | null> {
   const cookieString = Array.from(session.cookies.entries())
     .map(([k, v]) => `${k}=${v}`)
@@ -246,7 +246,7 @@ async function getGeometry(
 function transformCoordinates(
   x: number,
   y: number,
-  spatialRef: string
+  spatialRef: string,
 ): [number, number] {
   // Use the spatial reference from the API response to determine correct zone
   const sourceEPSG = `EPSG:${spatialRef}`;
@@ -259,10 +259,10 @@ function transformCoordinates(
  */
 function convertESRIRingsToGeoJSON(
   esriRings: number[][][],
-  spatialRef: string
+  spatialRef: string,
 ): [number, number][][] {
   return esriRings.map((ring) =>
-    ring.map(([x, y]) => transformCoordinates(x, y, spatialRef))
+    ring.map(([x, y]) => transformCoordinates(x, y, spatialRef)),
   );
 }
 
@@ -270,7 +270,7 @@ function convertESRIRingsToGeoJSON(
  * Geocode a single cadastral property identifier
  */
 export async function geocodeCadastralProperty(
-  identifier: string
+  identifier: string,
 ): Promise<CadastralGeometry | null> {
   try {
     console.log(`[Cadastre] Geocoding УПИ ${identifier}`);
@@ -305,18 +305,18 @@ export async function geocodeCadastralProperty(
       geometryResponse.SpatialReferenceCode !== "7802"
     ) {
       console.warn(
-        `[Cadastre] Unexpected spatial reference: ${geometryResponse.SpatialReferenceCode} (expected 7801 or 7802)`
+        `[Cadastre] Unexpected spatial reference: ${geometryResponse.SpatialReferenceCode} (expected 7801 or 7802)`,
       );
     }
 
     // Convert coordinates using the spatial reference from the API
     const polygon = convertESRIRingsToGeoJSON(
       geometryResponse.Geometry.rings,
-      geometryResponse.SpatialReferenceCode
+      geometryResponse.SpatialReferenceCode,
     );
 
     console.log(
-      `[Cadastre] Successfully geocoded ${identifier} with ${polygon[0].length} vertices`
+      `[Cadastre] Successfully geocoded ${identifier} with ${polygon[0].length} vertices`,
     );
 
     return {
@@ -326,7 +326,7 @@ export async function geocodeCadastralProperty(
   } catch (error) {
     console.error(
       `[Cadastre] Failed to geocode ${identifier}:`,
-      error instanceof Error ? error.message : error
+      error instanceof Error ? error.message : error,
     );
     return null;
   }
@@ -336,7 +336,7 @@ export async function geocodeCadastralProperty(
  * Geocode multiple cadastral properties with rate limiting
  */
 export async function geocodeCadastralProperties(
-  identifiers: string[]
+  identifiers: string[],
 ): Promise<Map<string, CadastralGeometry>> {
   const results = new Map<string, CadastralGeometry>();
 

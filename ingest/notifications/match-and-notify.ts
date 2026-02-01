@@ -34,14 +34,26 @@ interface MatchResult {
 /**
  * Convert Firestore timestamp to ISO string
  */
-function convertTimestamp(timestamp: any): string {
-  if (timestamp?._seconds) {
-    return new Date(timestamp._seconds * 1000).toISOString();
+function convertTimestamp(timestamp: unknown): string {
+  if (timestamp && typeof timestamp === "object") {
+    const t = timestamp as { _seconds?: unknown; toDate?: unknown };
+
+    // Check for Firestore internal format (_seconds)
+    if ("_seconds" in t && typeof t._seconds === "number") {
+      return new Date(t._seconds * 1000).toISOString();
+    }
+
+    // Check for Firestore Timestamp object (toDate method)
+    if ("toDate" in t && typeof t.toDate === "function") {
+      return (t.toDate as () => Date)().toISOString();
+    }
   }
-  if (timestamp?.toDate) {
-    return timestamp.toDate().toISOString();
+
+  if (typeof timestamp === "string") {
+    return timestamp;
   }
-  return timestamp || new Date().toISOString();
+
+  return new Date().toISOString();
 }
 
 /**
@@ -531,7 +543,7 @@ async function sendNotifications(
     }
 
     // Store deviceNotifications and messageSnapshot in the match document
-    const messageSnapshot: any = {
+    const messageSnapshot: Record<string, string> = {
       text: messageData?.text || "",
       createdAt: convertTimestamp(messageData?.createdAt),
     };
@@ -658,7 +670,6 @@ export async function main(): Promise<void> {
 
 // Run the script only when executed directly
 if (require.main === module) {
-  // eslint-disable-next-line unicorn/prefer-top-level-await
   void (async () => {
     try {
       await main();

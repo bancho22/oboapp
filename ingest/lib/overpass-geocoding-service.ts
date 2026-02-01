@@ -1,4 +1,9 @@
-import { Address, OverpassResponse, OverpassGeometry } from "./types";
+import {
+  Address,
+  OverpassResponse,
+  OverpassGeometry,
+  Coordinates,
+} from "./types";
 import * as turf from "@turf/turf";
 import type { Feature, MultiLineString, Position } from "geojson";
 import {
@@ -9,6 +14,11 @@ import {
 } from "./geocoding-utils";
 import { delay } from "./delay";
 import { roundCoordinate } from "../crawlers/shared/coordinate-utils";
+import { OverpassMockService } from "../__mocks__/services/overpass-mock-service";
+
+// Check if mocking is enabled
+const USE_MOCK = process.env.MOCK_OVERPASS_API === "true";
+const mockService = USE_MOCK ? new OverpassMockService() : null;
 
 // Constants for API rate limiting
 const OVERPASS_DELAY_MS = 500; // 500ms for Overpass API (generous limits)
@@ -293,7 +303,7 @@ async function getStreetGeometryFromOverpass(
 function findGeometricIntersection(
   street1: Feature<MultiLineString>,
   street2: Feature<MultiLineString>,
-): { lat: number; lng: number } | null {
+): Coordinates | null {
   try {
     // First, try exact intersection using turf.lineIntersect
     const intersections = turf.lineIntersect(street1, street2);
@@ -374,11 +384,11 @@ function findGeometricIntersection(
 
     // Last resort: find nearest point between the two lines
     let minDistance = Number.POSITIVE_INFINITY;
-    let bestPoint: { lat: number; lng: number } | null = null;
+    let bestPoint: Coordinates | null = null;
 
     for (const line1 of street1.geometry.coordinates) {
       for (const line2 of street2.geometry.coordinates) {
-        const lineString1 = turf.lineString(line1);
+        const _lineString1 = turf.lineString(line1);
         const lineString2 = turf.lineString(line2);
 
         // Sample points along both lines
@@ -424,6 +434,12 @@ function findGeometricIntersection(
 export async function overpassGeocodeIntersections(
   intersections: string[],
 ): Promise<Address[]> {
+  // Use mock if enabled
+  if (USE_MOCK && mockService) {
+    console.log("[MOCK] Using Overpass mock for intersections");
+    return mockService.overpassGeocodeIntersections(intersections);
+  }
+
   const results: Address[] = [];
 
   for (let i = 0; i < intersections.length; i++) {
@@ -485,9 +501,19 @@ export async function overpassGeocodeIntersections(
  */
 export async function getStreetSectionGeometry(
   streetName: string,
-  startCoords: { lat: number; lng: number },
-  endCoords: { lat: number; lng: number },
+  startCoords: Coordinates,
+  endCoords: Coordinates,
 ): Promise<Position[] | null> {
+  // Use mock if enabled
+  if (USE_MOCK && mockService) {
+    console.log("[MOCK] Using Overpass mock for street section geometry");
+    return mockService.getStreetSectionGeometry(
+      streetName,
+      startCoords,
+      endCoords,
+    );
+  }
+
   try {
     console.log(
       `🔍 Finding street section: ${streetName} from [${startCoords.lat}, ${startCoords.lng}] to [${endCoords.lat}, ${endCoords.lng}]`,
@@ -581,7 +607,6 @@ export async function getStreetSectionGeometry(
       // Find nearest unused segment to current point
       let nearestSegmentIdx = -1;
       let nearestDist = Infinity;
-      let nearestSnap: unknown = null;
 
       for (let i = 0; i < allSegments.length; i++) {
         if (usedSegments.has(i)) continue;
@@ -596,7 +621,7 @@ export async function getStreetSectionGeometry(
         if (dist < nearestDist) {
           nearestDist = dist;
           nearestSegmentIdx = i;
-          nearestSnap = snapped;
+          // nearestSnap = snapped; // unused but kept for potential debugging
         }
       }
 
@@ -664,7 +689,7 @@ export async function getStreetSectionGeometry(
  */
 async function geocodeAddressWithNominatim(
   address: string,
-): Promise<{ lat: number; lng: number } | null> {
+): Promise<Coordinates | null> {
   try {
     // Ensure address includes Sofia context
     const fullAddress =
@@ -706,11 +731,10 @@ async function geocodeAddressWithNominatim(
             `   ✅ Nominatim geocoded: "${address}" → [${coords.lat}, ${coords.lng}]`,
           );
           return coords;
-        } else {
-          console.warn(
-            `   ⚠️  Nominatim result for "${address}" outside Sofia: [${coords.lat}, ${coords.lng}]`,
-          );
         }
+        console.warn(
+          `   ⚠️  Nominatim result for "${address}" outside Sofia: [${coords.lat}, ${coords.lng}]`,
+        );
       }
 
       console.warn(
@@ -733,6 +757,12 @@ async function geocodeAddressWithNominatim(
 export async function overpassGeocodeAddresses(
   addresses: string[],
 ): Promise<Address[]> {
+  // Use mock if enabled
+  if (USE_MOCK && mockService) {
+    console.log("[MOCK] Using Overpass mock for addresses");
+    return mockService.overpassGeocodeAddresses(addresses);
+  }
+
   const results: Address[] = [];
 
   for (let i = 0; i < addresses.length; i++) {
@@ -743,7 +773,7 @@ export async function overpassGeocodeAddresses(
       // Pattern: "ул. Name Number" or "бул. Name Number"
       const hasNumber = /\d+/.test(address);
 
-      let coords: { lat: number; lng: number } | null = null;
+      let coords: Coordinates | null = null;
 
       if (hasNumber) {
         // Use Nominatim for specific addresses with house numbers

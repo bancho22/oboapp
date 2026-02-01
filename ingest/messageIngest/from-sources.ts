@@ -53,11 +53,17 @@ async function parseArguments(): Promise<IngestOptions> {
   for (const arg of args) {
     if (arg.startsWith("--boundaries=")) {
       options.boundariesPath = arg.split("=")[1];
-    } else if (arg === "--dry-run") {
+      continue;
+    }
+    if (arg === "--dry-run") {
       options.dryRun = true;
-    } else if (arg.startsWith("--source-type=")) {
+      continue;
+    }
+    if (arg.startsWith("--source-type=")) {
       options.sourceType = arg.split("=")[1];
-    } else if (arg.startsWith("--limit=")) {
+      continue;
+    }
+    if (arg.startsWith("--limit=")) {
       options.limit = Number.parseInt(arg.split("=")[1], 10);
     }
   }
@@ -69,7 +75,7 @@ async function fetchSources(
   adminDb: Firestore,
   options: IngestOptions,
 ): Promise<SourceDocument[]> {
-  let query = adminDb.collection("sources") as any;
+  let query = adminDb.collection("sources") as FirebaseFirestore.Query;
   const filters: string[] = [];
 
   if (options.sourceType) {
@@ -444,7 +450,6 @@ function logSummary(summary: IngestSummary, dryRun: boolean): void {
 }
 // Run only when executed directly
 if (require.main === module) {
-  // eslint-disable-next-line unicorn/prefer-top-level-await
   (async () => {
     const options = await parseArguments();
     await ingest(options);

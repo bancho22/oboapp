@@ -12,6 +12,11 @@ import {
   truncateIngestPayload,
   type IngestErrorRecorder,
 } from "./ingest-errors";
+import { GeminiMockService } from "../__mocks__/services/gemini-mock-service";
+
+// Check if mocking is enabled
+const USE_MOCK = process.env.MOCK_GEMINI_API === "true";
+const mockService = USE_MOCK ? new GeminiMockService() : null;
 
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY || "" });
 const MAX_INGEST_ERROR_LENGTH = 1000;
@@ -48,6 +53,12 @@ export async function categorize(
   text: string,
   ingestErrors?: IngestErrorRecorder,
 ): Promise<CategorizationResult | null> {
+  // Use mock if enabled
+  if (USE_MOCK && mockService) {
+    console.log("[MOCK] Using Gemini mock for categorization");
+    return mockService.categorize(text);
+  }
+
   const recorder = getIngestErrorRecorder(ingestErrors);
   try {
     // Validate message
@@ -118,6 +129,12 @@ export async function extractStructuredData(
   text: string,
   ingestErrors?: IngestErrorRecorder,
 ): Promise<ExtractedData | null> {
+  // Use mock if enabled
+  if (USE_MOCK && mockService) {
+    console.log("[MOCK] Using Gemini mock for extraction");
+    return mockService.extractStructuredData(text);
+  }
+
   const recorder = getIngestErrorRecorder(ingestErrors);
   try {
     // Validate message
@@ -165,21 +182,29 @@ export async function extractStructuredData(
         const validPins = Array.isArray(parsedResponse.pins)
           ? parsedResponse.pins
               .filter(
-                (pin: any) =>
-                  pin &&
+                (pin: unknown): pin is Record<string, unknown> =>
+                  pin !== null &&
                   typeof pin === "object" &&
-                  typeof pin.address === "string" &&
-                  pin.address.trim().length > 0 &&
-                  Array.isArray(pin.timespans),
+                  "address" in pin &&
+                  typeof (pin as Record<string, unknown>)["address"] ===
+                    "string" &&
+                  ((pin as Record<string, unknown>)["address"] as string).trim()
+                    .length > 0 &&
+                  "timespans" in pin &&
+                  Array.isArray((pin as Record<string, unknown>)["timespans"]),
               )
-              .map((pin: any) => ({
-                address: pin.address,
-                timespans: pin.timespans.filter(
-                  (time: any) =>
-                    time &&
+              .map((pin: Record<string, unknown>) => ({
+                address: pin["address"],
+                timespans: (pin["timespans"] as unknown[]).filter(
+                  (time: unknown): time is Record<string, unknown> =>
+                    time !== null &&
                     typeof time === "object" &&
-                    typeof time.start === "string" &&
-                    typeof time.end === "string",
+                    "start" in time &&
+                    typeof (time as Record<string, unknown>)["start"] ===
+                      "string" &&
+                    "end" in time &&
+                    typeof (time as Record<string, unknown>)["end"] ===
+                      "string",
                 ),
               }))
           : [];
@@ -188,24 +213,37 @@ export async function extractStructuredData(
         const validStreets = Array.isArray(parsedResponse.streets)
           ? parsedResponse.streets
               .filter(
-                (street: any) =>
-                  street &&
+                (street: unknown): street is Record<string, unknown> =>
+                  street !== null &&
                   typeof street === "object" &&
-                  typeof street.street === "string" &&
-                  typeof street.from === "string" &&
-                  typeof street.to === "string" &&
-                  Array.isArray(street.timespans),
+                  "street" in street &&
+                  typeof (street as Record<string, unknown>)["street"] ===
+                    "string" &&
+                  "from" in street &&
+                  typeof (street as Record<string, unknown>)["from"] ===
+                    "string" &&
+                  "to" in street &&
+                  typeof (street as Record<string, unknown>)["to"] ===
+                    "string" &&
+                  "timespans" in street &&
+                  Array.isArray(
+                    (street as Record<string, unknown>)["timespans"],
+                  ),
               )
-              .map((street: any) => ({
-                street: street.street,
-                from: street.from,
-                to: street.to,
-                timespans: street.timespans.filter(
-                  (time: any) =>
-                    time &&
+              .map((street: Record<string, unknown>) => ({
+                street: street["street"],
+                from: street["from"],
+                to: street["to"],
+                timespans: (street["timespans"] as unknown[]).filter(
+                  (time: unknown): time is Record<string, unknown> =>
+                    time !== null &&
                     typeof time === "object" &&
-                    typeof time.start === "string" &&
-                    typeof time.end === "string",
+                    "start" in time &&
+                    typeof (time as Record<string, unknown>)["start"] ===
+                      "string" &&
+                    "end" in time &&
+                    typeof (time as Record<string, unknown>)["end"] ===
+                      "string",
                 ),
               }))
           : [];
@@ -216,21 +254,30 @@ export async function extractStructuredData(
         )
           ? parsedResponse.cadastralProperties
               .filter(
-                (prop: any) =>
-                  prop &&
+                (prop: unknown): prop is Record<string, unknown> =>
+                  prop !== null &&
                   typeof prop === "object" &&
-                  typeof prop.identifier === "string" &&
-                  prop.identifier.trim().length > 0 &&
-                  Array.isArray(prop.timespans),
+                  "identifier" in prop &&
+                  typeof (prop as Record<string, unknown>)["identifier"] ===
+                    "string" &&
+                  (
+                    (prop as Record<string, unknown>)["identifier"] as string
+                  ).trim().length > 0 &&
+                  "timespans" in prop &&
+                  Array.isArray((prop as Record<string, unknown>)["timespans"]),
               )
-              .map((prop: any) => ({
-                identifier: prop.identifier,
-                timespans: prop.timespans.filter(
-                  (time: any) =>
-                    time &&
+              .map((prop: Record<string, unknown>) => ({
+                identifier: prop["identifier"],
+                timespans: (prop["timespans"] as unknown[]).filter(
+                  (time: unknown): time is Record<string, unknown> =>
+                    time !== null &&
                     typeof time === "object" &&
-                    typeof time.start === "string" &&
-                    typeof time.end === "string",
+                    "start" in time &&
+                    typeof (time as Record<string, unknown>)["start"] ===
+                      "string" &&
+                    "end" in time &&
+                    typeof (time as Record<string, unknown>)["end"] ===
+                      "string",
                 ),
               }))
           : [];

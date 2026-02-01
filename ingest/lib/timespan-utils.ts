@@ -225,29 +225,40 @@ export function extractTimespanRangeFromExtractedData(
  * @param feature - GeoJSON feature with properties
  * @returns Array of parsed Date objects
  */
-function extractDatesFromFeature(feature: any): Date[] {
+function extractDatesFromFeature(feature: unknown): Date[] {
   const dates: Date[] = [];
-  const props = feature.properties;
+
+  if (!feature || typeof feature !== "object" || !("properties" in feature)) {
+    return dates;
+  }
+
+  const f = feature as { properties?: unknown };
+  const props = f.properties as Record<string, unknown> | null | undefined;
 
   if (!props) return dates;
 
   // Try ISO format
-  const startISO = tryParseISODate(props.startTimeISO);
-  const endISO = tryParseISODate(props.endTimeISO);
+  const startISO = tryParseISODate(props["startTimeISO"]);
+  const endISO = tryParseISODate(props["endTimeISO"]);
   if (startISO) dates.push(startISO);
   if (endISO) dates.push(endISO);
 
   // Try Bulgarian format
-  const startBG = parseBulgarianDate(props.startTime);
-  const endBG = parseBulgarianDate(props.endTime);
+  const startBG = tryParseBulgarianDate(props["startTime"]);
+  const endBG = tryParseBulgarianDate(props["endTime"]);
   if (startBG) dates.push(startBG);
   if (endBG) dates.push(endBG);
 
   return dates;
 }
 
-function tryParseISODate(dateStr: string | undefined): Date | null {
-  if (!dateStr) return null;
+function tryParseBulgarianDate(dateStr: unknown): Date | null {
+  if (!dateStr || typeof dateStr !== "string") return null;
+  return parseBulgarianDate(dateStr);
+}
+
+function tryParseISODate(dateStr: unknown): Date | null {
+  if (!dateStr || typeof dateStr !== "string") return null;
   try {
     const date = new Date(dateStr);
     return Number.isNaN(date.getTime()) ? null : date;

@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { CategorizationResult } from "./categorize.schema";
 
 // Test only the validation logic with direct imports
 describe("categorize function validation", () => {
-  let mockGenerateContent: any;
+  let _mockGenerateContent: any;
   let originalEnv: any;
 
   beforeEach(() => {
@@ -15,7 +14,7 @@ describe("categorize function validation", () => {
     process.env.GOOGLE_AI_API_KEY = "mock-api-key";
 
     // Mock the generateContent function
-    mockGenerateContent = vi.fn();
+    _mockGenerateContent = vi.fn();
   });
 
   afterEach(() => {
@@ -42,9 +41,8 @@ describe("categorize function validation", () => {
     ];
 
     // Import the schema for direct validation testing
-    const { CategorizationResponseSchema } = await import(
-      "./categorize.schema"
-    );
+    const { CategorizationResponseSchema } =
+      await import("./categorize.schema");
 
     const result = CategorizationResponseSchema.safeParse(mockAiResponse);
     expect(result.success).toBe(true);
@@ -73,9 +71,8 @@ describe("categorize function validation", () => {
       },
     ];
 
-    const { CategorizationResponseSchema } = await import(
-      "./categorize.schema"
-    );
+    const { CategorizationResponseSchema } =
+      await import("./categorize.schema");
 
     const result = CategorizationResponseSchema.safeParse(invalidAiResponse);
     expect(result.success).toBe(false);
@@ -96,9 +93,8 @@ describe("categorize function validation", () => {
       },
     ];
 
-    const { CategorizationResponseSchema } = await import(
-      "./categorize.schema"
-    );
+    const { CategorizationResponseSchema } =
+      await import("./categorize.schema");
 
     const result = CategorizationResponseSchema.safeParse(invalidAiResponse);
     expect(result.success).toBe(false);
@@ -131,9 +127,8 @@ describe("categorize function validation", () => {
       },
     ];
 
-    const { CategorizationResponseSchema } = await import(
-      "./categorize.schema"
-    );
+    const { CategorizationResponseSchema } =
+      await import("./categorize.schema");
 
     const result = CategorizationResponseSchema.safeParse(mockAiResponse);
     expect(result.success).toBe(true);
@@ -182,9 +177,8 @@ describe("categorize function validation", () => {
       },
     ];
 
-    const { CategorizationResponseSchema } = await import(
-      "./categorize.schema"
-    );
+    const { CategorizationResponseSchema } =
+      await import("./categorize.schema");
 
     const result = CategorizationResponseSchema.safeParse(mockAiResponse);
     expect(result.success).toBe(true);
