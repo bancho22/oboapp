@@ -177,6 +177,96 @@ export function parseShortBulgarianDateTime(
 }
 
 /**
+ * Parse Bulgarian month name date format (DD Month YYYY) to ISO string
+ * Example: "20 Октомври 2025" -> ISO date string
+ *
+ * @param dateStr - Date string in format "DD Month YYYY" (e.g., "20 Октомври 2025")
+ * @returns ISO date string
+ */
+export function parseBulgarianMonthDate(dateStr: string): string {
+  try {
+    // Month name mapping (case-insensitive)
+    const monthMap: Record<string, string> = {
+      януари: "01",
+      февруари: "02",
+      март: "03",
+      април: "04",
+      май: "05",
+      юни: "06",
+      юли: "07",
+      август: "08",
+      септември: "09",
+      октомври: "10",
+      ноември: "11",
+      декември: "12",
+    };
+
+    // Clean and normalize the input
+    const cleaned = dateStr.trim();
+
+    // Match pattern: "DD Month YYYY" (e.g., "20 Октомври 2025")
+    const match = cleaned.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
+
+    if (!match) {
+      console.warn(
+        `⚠️ Unable to parse Bulgarian month date: ${dateStr}, using current date`,
+      );
+      return new Date().toISOString();
+    }
+
+    const [, day, monthName, year] = match;
+    const monthLower = monthName.toLowerCase();
+    const month = monthMap[monthLower];
+
+    if (!month) {
+      console.warn(
+        `⚠️ Unknown Bulgarian month name: ${monthName}, using current date`,
+      );
+      return new Date().toISOString();
+    }
+
+    // Create date in local timezone (assumed to be Europe/Sofia)
+    const date = new Date(
+      Number.parseInt(year, 10),
+      Number.parseInt(month, 10) - 1, // 0-indexed months
+      Number.parseInt(day, 10),
+      0, // hour
+      0, // minute
+      0, // second
+      0, // millisecond
+    );
+
+    if (Number.isNaN(date.getTime())) {
+      console.warn(
+        `⚠️ Invalid date components: ${dateStr}, using current date`,
+      );
+      return new Date().toISOString();
+    }
+
+    // Verify the parsed date matches input (catches invalid dates like Feb 31)
+    const parsedDay = Number.parseInt(day, 10);
+    const parsedMonth = Number.parseInt(month, 10) - 1; // 0-indexed
+    const parsedYear = Number.parseInt(year, 10);
+
+    if (
+      date.getDate() !== parsedDay ||
+      date.getMonth() !== parsedMonth ||
+      date.getFullYear() !== parsedYear
+    ) {
+      console.warn(
+        `⚠️ Invalid date (out of range): ${dateStr}, using current date`,
+      );
+      return new Date().toISOString();
+    }
+
+    return date.toISOString();
+  } catch (error) {
+    console.error(`❌ Error parsing Bulgarian month date: ${dateStr}`, error);
+    return new Date().toISOString();
+  }
+}
+
+/**
  * Format date for display in Bulgarian format
  *
  * @param date - Date object to format
