@@ -12,11 +12,20 @@ export async function updateMessage(
   fields: Record<string, unknown>,
 ): Promise<void> {
   const messagesRef = adminDb.collection("messages");
+
+  // Check if message is transitioning from non-finalized to finalized
+  let isTransitioningToFinalized = false;
+  if (fields.finalizedAt) {
+    const currentDoc = await messagesRef.doc(messageId).get();
+    const currentData = currentDoc.data();
+    isTransitioningToFinalized = !currentData?.finalizedAt;
+  }
+
   const processedFields = processFieldsForFirestore(fields);
   await messagesRef.doc(messageId).update(processedFields);
 
-  // If finalizing a message, update category aggregation
-  if (fields.finalizedAt) {
+  // Only update category aggregation when transitioning to finalized state
+  if (isTransitioningToFinalized) {
     await updateCategoryAggregationForMessage(messageId);
   }
 }
