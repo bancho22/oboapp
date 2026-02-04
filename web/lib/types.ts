@@ -15,7 +15,10 @@ import { PinSchema } from "@shared/schema/pin.schema";
 import { StreetSectionSchema } from "@shared/schema/street-section.schema";
 import { TimespanSchema } from "@shared/schema/timespan.schema";
 import { AddressSchema } from "@shared/schema/address.schema";
-import { ExtractedDataSchema } from "@shared/schema/extracted-data.schema";
+import {
+  ExtractedDataSchema,
+  CadastralPropertySchema,
+} from "@shared/schema/extracted-data.schema";
 
 // Import shared types
 export type {
@@ -34,6 +37,8 @@ export type Pin = z.infer<typeof PinSchema>;
 export type StreetSection = z.infer<typeof StreetSectionSchema>;
 
 export type ExtractedData = z.infer<typeof ExtractedDataSchema>;
+
+export type CadastralProperty = z.infer<typeof CadastralPropertySchema>;
 
 // GeoJSON Types
 export type GeoJSONGeometry = z.infer<typeof GeoJsonGeometrySchema>;

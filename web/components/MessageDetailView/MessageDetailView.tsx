@@ -1,18 +1,31 @@
 "use client";
 
-import React, { useEffect } from "react";
+import { useCallback } from "react";
 import { trackEvent } from "@/lib/analytics";
 import { Message } from "@/lib/types";
 import { classifyMessage } from "@/lib/message-classification";
 import { useDragPanel } from "@/lib/hooks/useDragPanel";
 import { useMessageAnimation } from "@/lib/hooks/useMessageAnimation";
+import { useEscapeKey } from "@/lib/hooks/useEscapeKey";
 import Header from "./Header";
 import SourceDisplay from "./Source";
 import Locations from "./Locations";
-import Addresses from "./Addresses";
 import DetailItem from "./DetailItem";
 import MessageText from "./MessageText";
 import CategoryChips from "@/components/CategoryChips";
+
+type CloseMethod = "drag" | "esc" | "backdrop";
+
+function formatDate(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  return d.toLocaleDateString("bg-BG", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 interface MessageDetailViewProps {
   readonly message: Message | null;
@@ -25,61 +38,37 @@ export default function MessageDetailView({
   onClose,
   onAddressClick,
 }: Readonly<MessageDetailViewProps>) {
-  // Create a wrapper for drag-to-close that tracks the event
-  const handleDragClose = () => {
-    if (message) {
-      trackEvent({
-        name: "message_detail_closed",
-        params: {
-          message_id: message.id || "unknown",
-          close_method: "drag",
-        },
-      });
-    }
-    onClose();
-  };
+  // Centralized close handler with analytics tracking
+  const handleClose = useCallback(
+    (method: CloseMethod) => {
+      if (message) {
+        trackEvent({
+          name: "message_detail_closed",
+          params: {
+            message_id: message.id || "unknown",
+            close_method: method,
+          },
+        });
+      }
+      onClose();
+    },
+    [message, onClose],
+  );
 
   // Drag to close functionality
   const { isDragging, dragOffset, handlers } = useDragPanel({
     direction: "vertical",
     isOpen: true,
-    onAction: handleDragClose,
+    onAction: () => handleClose("drag"),
   });
 
   // Handle animation state
   const isVisible = useMessageAnimation(message);
 
   // Close on ESC key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && message) {
-        trackEvent({
-          name: "message_detail_closed",
-          params: {
-            message_id: message.id || "unknown",
-            close_method: "esc",
-          },
-        });
-        onClose();
-      }
-    };
-
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
-  }, [message, onClose]);
+  useEscapeKey(() => handleClose("esc"), !!message);
 
   if (!message) return null;
-
-  const formatDate = (date: Date | string) => {
-    const d = typeof date === "string" ? new Date(date) : date;
-    return d.toLocaleDateString("bg-BG", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   return (
     <>
@@ -87,18 +76,7 @@ export default function MessageDetailView({
         className={`fixed inset-0 z-30 bg-black/20 backdrop-blur-sm pointer-events-auto transition-opacity duration-300 ${
           isVisible ? "opacity-100" : "opacity-0"
         }`}
-        onClick={() => {
-          if (message) {
-            trackEvent({
-              name: "message_detail_closed",
-              params: {
-                message_id: message.id || "unknown",
-                close_method: "backdrop",
-              },
-            });
-          }
-          onClose();
-        }}
+        onClick={() => handleClose("backdrop")}
         aria-hidden="true"
       />
 
@@ -166,13 +144,13 @@ export default function MessageDetailView({
             </DetailItem>
           )}
 
-          <Locations pins={message.pins} streets={message.streets} />
-
-          <Addresses
+          <Locations
+            pins={message.pins}
+            streets={message.streets}
+            busStops={message.busStops}
+            cadastralProperties={message.cadastralProperties}
             addresses={message.addresses}
-            onAddressClick={onAddressClick}
-            onClose={onClose}
-            messageId={message.id}
+            onLocationClick={onAddressClick}
           />
 
           {message.geoJson?.features && (
