@@ -13,6 +13,7 @@ import Locations from "./Locations";
 import DetailItem from "./DetailItem";
 import MessageText from "./MessageText";
 import CategoryChips from "@/components/CategoryChips";
+import { getCentroid } from "@/lib/geometry-utils";
 
 type CloseMethod = "drag" | "esc" | "backdrop";
 
@@ -25,6 +26,25 @@ function formatDate(date: Date | string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+// Calculate combined centroid from all GeoJSON features
+function getFeaturesCentroid(
+  geoJson: Message["geoJson"],
+): { lat: number; lng: number } | null {
+  const features = geoJson?.features;
+  if (!features || features.length === 0) return null;
+
+  const centroids = features
+    .map((f) => getCentroid(f.geometry))
+    .filter((c): c is { lat: number; lng: number } => c !== null);
+
+  if (centroids.length === 0) return null;
+
+  const avgLat = centroids.reduce((sum, c) => sum + c.lat, 0) / centroids.length;
+  const avgLng = centroids.reduce((sum, c) => sum + c.lng, 0) / centroids.length;
+
+  return { lat: avgLat, lng: avgLng };
 }
 
 interface MessageDetailViewProps {
@@ -153,15 +173,46 @@ export default function MessageDetailView({
             onLocationClick={onAddressClick}
           />
 
-          {message.geoJson?.features && (
-            <DetailItem title="Обекти на картата">
-              <p className="text-sm text-gray-900">
-                {message.geoJson.features.length}{" "}
-                {message.geoJson.features.length === 1 ? "обект" : "обекта"} на
-                картата
-              </p>
-            </DetailItem>
-          )}
+          {message.geoJson?.features &&
+            message.geoJson.features.length > 0 &&
+            (() => {
+              const centroid = getFeaturesCentroid(message.geoJson);
+              const isClickable = centroid && onAddressClick;
+              const handleGeoClick = () => {
+                if (centroid && onAddressClick) {
+                  onAddressClick(centroid.lat, centroid.lng);
+                  // Scroll body to bring the map into view (especially on mobile)
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              };
+              return (
+                <DetailItem title="Обекти на картата">
+                  {isClickable ? (
+                    <button
+                      type="button"
+                      onClick={handleGeoClick}
+                      className="w-full text-left bg-neutral-light rounded-md p-3 border border-neutral-border hover:bg-info-light hover:border-info-border transition-colors cursor-pointer"
+                    >
+                      <p className="text-sm text-foreground">
+                        {message.geoJson!.features.length}{" "}
+                        {message.geoJson!.features.length === 1
+                          ? "обект"
+                          : "обекта"}{" "}
+                        на картата
+                      </p>
+                    </button>
+                  ) : (
+                    <p className="text-sm text-gray-900">
+                      {message.geoJson!.features.length}{" "}
+                      {message.geoJson!.features.length === 1
+                        ? "обект"
+                        : "обекта"}{" "}
+                      на картата
+                    </p>
+                  )}
+                </DetailItem>
+              );
+            })()}
         </div>
       </aside>
     </>
