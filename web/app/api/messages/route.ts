@@ -13,6 +13,16 @@ import admin from "firebase-admin";
 const { or, where } = admin.firestore.Filter;
 
 const DEFAULT_RELEVANCE_DAYS = 7;
+const CLUSTER_ZOOM_THRESHOLD = 15;
+
+/**
+ * Calculate centroid of a coordinate array
+ */
+function calculateCentroid(coords: [number, number][]): [number, number] {
+  const avgLng = coords.reduce((sum, c) => sum + c[0], 0) / coords.length;
+  const avgLat = coords.reduce((sum, c) => sum + c[1], 0) / coords.length;
+  return [avgLng, avgLat];
+}
 
 /**
  * Convert Firestore document to Message object
@@ -217,38 +227,7 @@ export async function GET(request: Request) {
         .get();
 
       snapshot.forEach((doc) => {
-        const data = doc.data();
-        allMessages.push({
-          id: doc.id,
-          text: data.text,
-          addresses: data.addresses ? JSON.parse(data.addresses) : [],
-          geoJson: data.geoJson ? JSON.parse(data.geoJson) : undefined,
-          createdAt: convertTimestamp(data.createdAt),
-          crawledAt: data.crawledAt
-            ? convertTimestamp(data.crawledAt)
-            : undefined,
-          finalizedAt: data.finalizedAt
-            ? convertTimestamp(data.finalizedAt)
-            : undefined,
-          source: data.source,
-          sourceUrl: data.sourceUrl,
-          markdownText: data.markdownText,
-          categories: Array.isArray(data.categories) ? data.categories : [],
-          timespanStart: data.timespanStart
-            ? convertTimestamp(data.timespanStart)
-            : undefined,
-          timespanEnd: data.timespanEnd
-            ? convertTimestamp(data.timespanEnd)
-            : undefined,
-          cityWide: data.cityWide || false,
-          responsibleEntity: data.responsibleEntity,
-          pins: Array.isArray(data.pins) ? data.pins : undefined,
-          streets: Array.isArray(data.streets) ? data.streets : undefined,
-          cadastralProperties: Array.isArray(data.cadastralProperties)
-            ? data.cadastralProperties
-            : undefined,
-          busStops: Array.isArray(data.busStops) ? data.busStops : undefined,
-        });
+        allMessages.push(docToMessage(doc));
       });
     }
 
@@ -272,42 +251,29 @@ export async function GET(request: Request) {
       });
     }
 
-    // Simplify geometry to centroids for zoom levels < 15 (for clustering)
-    if (zoom !== undefined && zoom < 15) {
+    // Simplify geometry to centroids for low zoom levels (for clustering)
+    if (zoom !== undefined && zoom < CLUSTER_ZOOM_THRESHOLD) {
       messages = messages.map((message) => {
         if (!message.geoJson?.features) return message;
 
         const simplifiedFeatures = message.geoJson.features.map((feature) => {
           // Only simplify LineString and Polygon to Points
-          if (
-            feature.geometry.type === "LineString" ||
-            feature.geometry.type === "Polygon"
-          ) {
-            // Calculate centroid
-            let centroid: [number, number];
-            if (feature.geometry.type === "LineString") {
-              const coords = feature.geometry.coordinates;
-              const avgLng =
-                coords.reduce((sum, c) => sum + c[0], 0) / coords.length;
-              const avgLat =
-                coords.reduce((sum, c) => sum + c[1], 0) / coords.length;
-              centroid = [avgLng, avgLat];
-            } else {
-              // Polygon
-              const coords = feature.geometry.coordinates[0];
-              const avgLng =
-                coords.reduce((sum, c) => sum + c[0], 0) / coords.length;
-              const avgLat =
-                coords.reduce((sum, c) => sum + c[1], 0) / coords.length;
-              centroid = [avgLng, avgLat];
-            }
-
+          if (feature.geometry.type === "LineString") {
+            const centroid = calculateCentroid(feature.geometry.coordinates);
             return {
               ...feature,
-              geometry: {
-                type: "Point" as const,
-                coordinates: centroid,
+              geometry: { type: "Point" as const, coordinates: centroid },
+              properties: {
+                ...feature.properties,
+                _originalGeometryType: feature.geometry.type,
               },
+            } as typeof feature;
+          }
+          if (feature.geometry.type === "Polygon") {
+            const centroid = calculateCentroid(feature.geometry.coordinates[0]);
+            return {
+              ...feature,
+              geometry: { type: "Point" as const, coordinates: centroid },
               properties: {
                 ...feature.properties,
                 _originalGeometryType: feature.geometry.type,
