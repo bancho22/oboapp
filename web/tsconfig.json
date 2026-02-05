@@ -23,6 +23,7 @@
     ],
     "paths": {
       "@/*": ["./*"],
+      "@oboapp/shared": ["../shared"],
       "zod": ["./node_modules/zod"]
     },
     "baseUrl": "."
