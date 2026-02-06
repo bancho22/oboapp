@@ -58,7 +58,6 @@ flowchart TD
 
 - **AI Categorization** - Single text input → multiple categorized messages with rich metadata
 - **Categories** - Infrastructure types: water, heating, traffic, construction, etc.
-- **Relations** - Extracted relationship terms for message clustering
 - **Geographic Scope** - City-wide vs. specific addresses, coordinates, bus stops, УПИ properties
 - **Relevance Decision** - Each categorized message marked as relevant/irrelevant
 - **Normalized Text** - Clean text for downstream processing
