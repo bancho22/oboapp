@@ -27,12 +27,22 @@ npm install
 
 ### 3. Start Emulators
 
+#### 3.1. via Docker
+
 ```bash
 docker-compose up firebase-emulators
 ```
 
 Wait for: `✔  All emulators ready! It is now safe to connect your app.`
 
+#### 3.2. without using Docker
+
+```bash
+cd ingest
+npm run emulators
+```
+
+Wait for: `✔  All emulators ready! It is now safe to connect your app.`
 **Emulator UI:** http://localhost:4000
 
 ### 4. Seed Test Data (First Time)
@@ -52,6 +62,8 @@ Stop emulators (Ctrl+C), then restart. Data persists across restarts.
 cd web
 npm run dev
 ```
+
+Make sure to add your Google Maps API key to the `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` variable in `web/.env.local`.
 
 **App:** http://localhost:3000
 
