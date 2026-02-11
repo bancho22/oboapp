@@ -22,8 +22,8 @@ program
     "after",
     `
 Examples:
-  $ pnpm sources:clean -- --retain lozenets-sofia-bg
-  $ pnpm sources:clean -- --retain rayon-oborishte-bg --dry-run
+  $ pnpm sources:clean --retain lozenets-sofia-bg
+  $ pnpm sources:clean --retain rayon-oborishte-bg --dry-run
 
 IMPORTANT: Only deletes sources that have NOT been ingested into messages.
 Sources that have corresponding messages in the messages collection will be preserved.

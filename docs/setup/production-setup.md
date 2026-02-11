@@ -160,7 +160,7 @@ Get Firebase config values from: **Firebase Console → Project Settings → Gen
 ```bash
 cd ingest
 pnpm install
-pnpm crawl -- --source sofiyska-voda
+pnpm crawl --source sofiyska-voda
 pnpm ingest
 pnpm notify
 ```

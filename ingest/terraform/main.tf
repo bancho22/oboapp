@@ -276,7 +276,7 @@ resource "google_cloud_run_v2_job" "crawlers" {
       
       containers {
         image = local.full_image_url
-        args  = ["pnpm", "run", "prebuilt:crawl", "--", "--source", each.value.source]
+        args  = ["pnpm", "run", "prebuilt:crawl", "--source", each.value.source]
         
         resources {
           limits = {
