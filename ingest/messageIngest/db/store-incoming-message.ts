@@ -28,6 +28,7 @@ export async function storeIncomingMessage(
   text: string,
   userId: string,
   userEmail: string | null,
+  locality: string,
   source: string = "web-interface",
   sourceUrl?: string,
   crawledAt?: Date,
@@ -37,6 +38,7 @@ export async function storeIncomingMessage(
   const docData: Record<string, unknown> = {
     text,
     userId,
+    locality,
     userEmail,
     source,
     createdAt: FieldValue.serverTimestamp(),

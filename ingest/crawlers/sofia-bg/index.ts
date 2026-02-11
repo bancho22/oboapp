@@ -17,6 +17,7 @@ dotenv.config({ path: resolve(process.cwd(), ".env.local") });
 
 const INDEX_URL = "https://www.sofia.bg/repairs-and-traffic-changes";
 const SOURCE_TYPE = "sofia-bg";
+const LOCALITY = "bg.sofia";
 const DELAY_BETWEEN_REQUESTS = 2000; // 2 seconds
 
 /**
@@ -32,6 +33,7 @@ const processPost = (
     postLink,
     adminDb,
     SOURCE_TYPE,
+    LOCALITY,
     DELAY_BETWEEN_REQUESTS,
     extractPostDetails,
   );

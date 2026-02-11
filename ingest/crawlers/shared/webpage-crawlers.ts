@@ -14,20 +14,24 @@ const turndownService = createTurndownService();
  * Build a SourceDocument from webpage content (HTML to Markdown conversion)
  * Used by WordPress-style crawlers like rayon-oborishte-bg and sofia-bg
  */
-export function buildWebPageSourceDocument(
-  url: string,
-  title: string,
-  dateText: string,
-  contentHtml: string,
-  sourceType: string,
-  customDateParser?: (dateText: string) => string,
-): {
+export function buildWebPageSourceDocument(options: {
+  url: string;
+  title: string;
+  dateText: string;
+  contentHtml: string;
+  sourceType: string;
+  locality: string;
+  customDateParser?: (dateText: string) => string;
+}): {
   url: string;
   title: string;
   datePublished: string;
   message: string;
   sourceType: string;
+  locality: string;
 } {
+  const { url, title, dateText, contentHtml, sourceType, locality, customDateParser } = options;
+
   if (!title) {
     throw new Error(`Failed to extract title from ${url}`);
   }
@@ -50,6 +54,7 @@ export function buildWebPageSourceDocument(
     datePublished,
     message,
     sourceType,
+    locality,
   };
 }
 
@@ -65,6 +70,7 @@ export async function processWordpressPost<
   postLink: TPostLink,
   adminDb: Firestore,
   sourceType: string,
+  locality: string,
   delayMs: number,
   extractPostDetails: (page: Page) => Promise<TDetails>,
   customDateParser?: (dateText: string) => string,
@@ -81,14 +87,15 @@ export async function processWordpressPost<
 
     const details = await extractPostDetails(page);
 
-    const postDetails = buildWebPageSourceDocument(
+    const postDetails = buildWebPageSourceDocument({
       url,
-      details.title,
-      details.dateText,
-      details.contentHtml,
+      title: details.title,
+      dateText: details.dateText,
+      contentHtml: details.contentHtml,
       sourceType,
+      locality,
       customDateParser,
-    );
+    });
 
     const sourceDoc = {
       ...postDetails,
