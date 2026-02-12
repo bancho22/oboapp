@@ -209,17 +209,25 @@ export default function HomeContent() {
 
   // Center map on selected message's geometry when detail view opens (only once per message)
   useEffect(() => {
-    if (!selectedMessage?.geoJson || !handleAddressClick) return;
-    
+    // Require a selected message with geometry and a ready map/navigation handler
+    if (
+      !selectedMessage?.geoJson ||
+      !handleAddressClick ||
+      !centerMapFn ||
+      !mapInstance
+    ) {
+      return;
+    }
+
     // Skip if we've already centered on this message
     if (lastCenteredMessageIdRef.current === selectedMessage.id) return;
 
     const centroid = getFeaturesCentroid(selectedMessage.geoJson);
     if (centroid) {
-      lastCenteredMessageIdRef.current = selectedMessage.id ?? null;
       handleAddressClick(centroid.lat, centroid.lng);
+      lastCenteredMessageIdRef.current = selectedMessage.id ?? null;
     }
-  }, [selectedMessage, handleAddressClick]);
+  }, [selectedMessage, handleAddressClick, centerMapFn, mapInstance]);
 
   // Reset centered message tracking when selection is cleared
   useEffect(() => {
