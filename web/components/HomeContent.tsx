@@ -22,6 +22,7 @@ import { useInterestManagement } from "@/lib/hooks/useInterestManagement";
 import { useCategoryFilter } from "@/lib/hooks/useCategoryFilter";
 import { classifyMessage } from "@/lib/message-classification";
 import { createMessageUrl } from "@/lib/url-utils";
+import { getFeaturesCentroid } from "@/lib/geometry-utils";
 import type { Message } from "@/lib/types";
 import { isValidMessageId } from "@oboapp/shared";
 
@@ -203,6 +204,30 @@ export default function HomeContent() {
     return null;
   }, [messageId, viewportMatch, fetchedMessage]);
 
+  // Track the last message we centered on to avoid re-centering loops
+  const lastCenteredMessageIdRef = useRef<string | null>(null);
+
+  // Center map on selected message's geometry when detail view opens (only once per message)
+  useEffect(() => {
+    if (!selectedMessage?.geoJson || !handleAddressClick) return;
+    
+    // Skip if we've already centered on this message
+    if (lastCenteredMessageIdRef.current === selectedMessage.id) return;
+
+    const centroid = getFeaturesCentroid(selectedMessage.geoJson);
+    if (centroid) {
+      lastCenteredMessageIdRef.current = selectedMessage.id ?? null;
+      handleAddressClick(centroid.lat, centroid.lng);
+    }
+  }, [selectedMessage, handleAddressClick]);
+
+  // Reset centered message tracking when selection is cleared
+  useEffect(() => {
+    if (!selectedMessage) {
+      lastCenteredMessageIdRef.current = null;
+    }
+  }, [selectedMessage]);
+
   return (
     <div
       className="flex-1 flex flex-col [@media(min-width:1280px)_and_(min-aspect-ratio:4/3)]:flex-row"
@@ -244,6 +269,7 @@ export default function HomeContent() {
           targetMode={targetMode}
           initialMapCenter={initialMapCenter}
           hoveredMessageId={hoveredMessageId}
+          selectedMessageId={selectedMessage?.id}
           onFeatureClick={handleFeatureClick}
           onMapReady={handleMapReady}
           onBoundsChanged={handleBoundsChanged}

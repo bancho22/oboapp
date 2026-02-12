@@ -45,6 +45,7 @@ interface MapComponentProps {
   readonly initialCenter?: { lat: number; lng: number };
   readonly shouldTrackLocation?: boolean;
   readonly hoveredMessageId?: string | null;
+  readonly selectedMessageId?: string | null;
 }
 
 // Oborishte District center coordinates
@@ -113,6 +114,7 @@ export default function MapComponent({
   initialCenter,
   shouldTrackLocation = false,
   hoveredMessageId,
+  selectedMessageId,
 }: MapComponentProps) {
   const mapRef = useRef<google.maps.Map | null>(null);
   const latestCenterRef = useRef(SOFIA_CENTER);
@@ -285,6 +287,7 @@ export default function MapComponent({
             map={mapInstance}
             currentZoom={currentZoom}
             hoveredMessageId={hoveredMessageId}
+            selectedMessageId={selectedMessageId}
           />
 
           {/* Render interest circles */}
