@@ -183,7 +183,10 @@ resource "google_workflows_workflow" "pipeline_emergent" {
   service_account = google_service_account.ingest_runner.email
   source_contents = file("${path.module}/workflows/emergent.yaml")
   
-  depends_on = [google_project_service.workflows]
+  depends_on = [
+    google_project_service.workflows,
+    google_project_iam_member.ci_workflows_admin,
+  ]
 }
 
 # Workflow for all crawlers pipeline (runs 3x daily)
@@ -194,7 +197,10 @@ resource "google_workflows_workflow" "pipeline_all" {
   service_account = google_service_account.ingest_runner.email
   source_contents = file("${path.module}/workflows/all.yaml")
   
-  depends_on = [google_project_service.workflows]
+  depends_on = [
+    google_project_service.workflows,
+    google_project_iam_member.ci_workflows_admin,
+  ]
 }
 
 # ── Cloud Run Jobs ────────────────────────────────────────────────────────────
