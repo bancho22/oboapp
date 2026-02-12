@@ -114,6 +114,14 @@ resource "google_project_iam_member" "workflows_invoker" {
   member  = "serviceAccount:${google_service_account.ingest_runner.email}"
 }
 
+# Grant Workflows Admin to CI service account (for Terraform to create/update workflow definitions)
+# This uses a variable so it's self-bootstrapping — the CI SA that runs Terraform gets the permission it needs.
+resource "google_project_iam_member" "ci_workflows_admin" {
+  project = var.project_id
+  role    = "roles/workflows.admin"
+  member  = "serviceAccount:${var.ci_service_account_email}"
+}
+
 # Grant Secret Manager access
 resource "google_project_iam_member" "secret_accessor" {
   project = var.project_id
