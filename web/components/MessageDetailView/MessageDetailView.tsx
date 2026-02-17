@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import { trackEvent } from "@/lib/analytics";
 import { Message } from "@/lib/types";
 import { classifyMessage } from "@/lib/message-classification";
@@ -27,6 +27,20 @@ function formatDate(date: Date | string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+// Mobile viewport detection via useSyncExternalStore
+const mobileQuery = '(max-width: 639px)';
+function subscribeMobile(callback: () => void) {
+  const mql = window.matchMedia(mobileQuery);
+  mql.addEventListener('change', callback);
+  return () => mql.removeEventListener('change', callback);
+}
+function getIsMobile() {
+  return window.matchMedia(mobileQuery).matches;
+}
+function getIsMobileServer() {
+  return false;
 }
 
 interface MessageDetailViewProps {
@@ -60,6 +74,7 @@ export default function MessageDetailView({
   // Refs for scroll tracking and overscroll-to-close
   const scrollContainerRef = useRef<HTMLElement>(null);
   const [expandedHeight, setExpandedHeight] = useState(50); // vh units, starts at 50vh
+  const isMobile = useSyncExternalStore(subscribeMobile, getIsMobile, getIsMobileServer);
   
   // Overscroll-to-close state
   const [pullDownOffset, setPullDownOffset] = useState(0);
@@ -86,17 +101,11 @@ export default function MessageDetailView({
 
   // Track scroll position for dynamic height expansion
   const handleScroll = useCallback((e: React.UIEvent<HTMLElement>) => {
-    const target = e.currentTarget;
-    const scrollTop = target.scrollTop;
-    const scrollHeight = target.scrollHeight;
-    const clientHeight = target.clientHeight;
+    const scrollTop = e.currentTarget.scrollTop;
     
-    // Calculate dynamic height expansion on mobile (50vh to 90vh)
+    // Expand to 90vh on any downward scroll, reset to 50vh at top
     if (scrollTop > 0) {
-      const maxScroll = scrollHeight - clientHeight;
-      const scrollPercent = maxScroll > 0 ? Math.min(scrollTop / maxScroll, 1) : 0;
-      const newHeight = 50 + (scrollPercent * 40);
-      setExpandedHeight(Math.round(newHeight));
+      setExpandedHeight(90);
     } else {
       setExpandedHeight(50);
     }
@@ -125,7 +134,12 @@ export default function MessageDetailView({
       isPullingDown.current = false;
       setPullDownOffset(0);
     }
-  }, []);
+    
+    // If swiping up (negative deltaY) and on mobile, expand to 90vh
+    if (isMobile && deltaY < -20) {
+      setExpandedHeight(90);
+    }
+  }, [isMobile]);
   
   const handleContainerTouchEnd = useCallback(() => {
     pullTouchStartY.current = null;
@@ -213,9 +227,7 @@ export default function MessageDetailView({
       style={{
         transform: isAnyDragging ? `translateY(${activeDragOffset}px)` : undefined,
         transition: isAnyDragging ? "none" : undefined,
-        maxHeight: typeof window !== 'undefined' && window.matchMedia('(min-width: 640px)').matches 
-          ? undefined 
-          : `${expandedHeight}vh`, // Dynamic height on mobile only
+        maxHeight: isMobile ? `${expandedHeight}vh` : undefined,
       }}
     >
         <Header
