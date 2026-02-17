@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useRef, useState } from "react";
 import { trackEvent } from "@/lib/analytics";
 import { Message } from "@/lib/types";
 import { classifyMessage } from "@/lib/message-classification";
@@ -57,12 +57,33 @@ export default function MessageDetailView({
     [message, onClose],
   );
 
-  // Drag to close functionality
+  // Refs for scroll tracking and overscroll-to-close
+  const scrollContainerRef = useRef<HTMLElement>(null);
+  const [isAtTop, setIsAtTop] = useState(true);
+
+  // Drag to close functionality (header/handle)
   const { isDragging, dragOffset, handlers } = useDragPanel({
     direction: "vertical",
     isOpen: true,
     onAction: () => handleClose("drag"),
   });
+
+  // Overscroll drag to close (content area)
+  const {
+    isDragging: isOverscrollDragging,
+    dragOffset: overscrollDragOffset,
+    handlers: overscrollHandlers,
+  } = useDragPanel({
+    direction: "vertical",
+    isOpen: true,
+    onAction: () => handleClose("drag"),
+  });
+
+  // Track scroll position for overscroll-to-close
+  const handleScroll = useCallback((e: React.UIEvent<HTMLElement>) => {
+    const target = e.currentTarget;
+    setIsAtTop(target.scrollTop <= 0);
+  }, []);
 
   // Handle animation state
   const isVisible = useMessageAnimation(message);
@@ -72,8 +93,17 @@ export default function MessageDetailView({
 
   if (!message) return null;
 
+  // Determine which drag is active
+  const activeDragOffset = isOverscrollDragging
+    ? overscrollDragOffset
+    : isDragging
+      ? dragOffset
+      : 0;
+  const isAnyDragging = isDragging || isOverscrollDragging;
+
   return (
     <aside
+      ref={scrollContainerRef}
       aria-label="Детайли за сигнала"
       className={`fixed ${zIndex.overlayContent} bg-white shadow-2xl overflow-y-auto transition-all duration-300 ease-out
         bottom-0 left-0 right-0 max-h-[50vh] rounded-t-2xl
@@ -84,9 +114,10 @@ export default function MessageDetailView({
             : "translate-y-full sm:translate-y-0 sm:translate-x-full"
         }
       `}
+      onScroll={handleScroll}
       style={{
-        transform: isDragging ? `translateY(${dragOffset}px)` : undefined,
-        transition: isDragging ? "none" : undefined,
+        transform: isAnyDragging ? `translateY(${activeDragOffset}px)` : undefined,
+        transition: isAnyDragging ? "none" : undefined,
       }}
     >
         <Header
@@ -99,7 +130,8 @@ export default function MessageDetailView({
         <div
           className={`px-4 sm:px-6 py-4 pb-6 sm:pb-4 space-y-6 transition-opacity duration-500 delay-100 ${
             isVisible ? "opacity-100" : "opacity-0"
-          }`}
+          } ${isAtTop ? "sm:cursor-default cursor-grab active:cursor-grabbing" : ""}`}
+          {...(isAtTop ? overscrollHandlers : {})}
         >
           {message.finalizedAt && (
             <DetailItem title="Публикувано тук">
