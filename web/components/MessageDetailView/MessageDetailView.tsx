@@ -59,7 +59,23 @@ export default function MessageDetailView({
 
   // Refs for scroll tracking and overscroll-to-close
   const scrollContainerRef = useRef<HTMLElement>(null);
-  const [isAtTop, setIsAtTop] = useState(true);
+  const [expandedHeight, setExpandedHeight] = useState(50); // vh units, starts at 50vh
+  
+  // Overscroll-to-close state
+  const [pullDownOffset, setPullDownOffset] = useState(0);
+  const isPullingDown = useRef(false);
+  const pullTouchStartY = useRef<number | null>(null);
+  
+  // Reset height when message changes (new panel or reopen)
+  const prevMessageId = useRef<string | undefined>(undefined);
+  if (message?.id !== prevMessageId.current) {
+    prevMessageId.current = message?.id;
+    if (expandedHeight !== 50) setExpandedHeight(50);
+    if (pullDownOffset !== 0) setPullDownOffset(0);
+  }
+  
+  // Track header drag for expansion
+  const headerTouchStartY = useRef<number | null>(null);
 
   // Drag to close functionality (header/handle)
   const { isDragging, dragOffset, handlers } = useDragPanel({
@@ -68,22 +84,98 @@ export default function MessageDetailView({
     onAction: () => handleClose("drag"),
   });
 
-  // Overscroll drag to close (content area)
-  const {
-    isDragging: isOverscrollDragging,
-    dragOffset: overscrollDragOffset,
-    handlers: overscrollHandlers,
-  } = useDragPanel({
-    direction: "vertical",
-    isOpen: true,
-    onAction: () => handleClose("drag"),
-  });
-
-  // Track scroll position for overscroll-to-close
+  // Track scroll position for dynamic height expansion
   const handleScroll = useCallback((e: React.UIEvent<HTMLElement>) => {
     const target = e.currentTarget;
-    setIsAtTop(target.scrollTop <= 0);
+    const scrollTop = target.scrollTop;
+    const scrollHeight = target.scrollHeight;
+    const clientHeight = target.clientHeight;
+    
+    // Calculate dynamic height expansion on mobile (50vh to 90vh)
+    if (scrollTop > 0) {
+      const maxScroll = scrollHeight - clientHeight;
+      const scrollPercent = maxScroll > 0 ? Math.min(scrollTop / maxScroll, 1) : 0;
+      const newHeight = 50 + (scrollPercent * 40);
+      setExpandedHeight(Math.round(newHeight));
+    } else {
+      setExpandedHeight(50);
+    }
   }, []);
+  
+  // Overscroll-to-close: pull down when at top of content
+  const handleContainerTouchStart = useCallback((e: React.TouchEvent) => {
+    pullTouchStartY.current = e.touches[0].clientY;
+    isPullingDown.current = false;
+  }, []);
+  
+  const handleContainerTouchMove = useCallback((e: React.TouchEvent) => {
+    if (pullTouchStartY.current === null) return;
+    
+    const scrollTop = scrollContainerRef.current?.scrollTop ?? 0;
+    const deltaY = e.touches[0].clientY - pullTouchStartY.current;
+    
+    // If at top and pulling down, enter overscroll mode
+    if (scrollTop <= 0 && deltaY > 0) {
+      isPullingDown.current = true;
+      e.preventDefault(); // Prevent native scroll/bounce
+      // Apply resistance: offset moves at 60% of finger movement
+      setPullDownOffset(deltaY * 0.6);
+    } else if (isPullingDown.current && deltaY <= 0) {
+      // User reversed direction back up, cancel pull
+      isPullingDown.current = false;
+      setPullDownOffset(0);
+    }
+  }, []);
+  
+  const handleContainerTouchEnd = useCallback(() => {
+    pullTouchStartY.current = null;
+    if (isPullingDown.current) {
+      isPullingDown.current = false;
+      if (pullDownOffset > 40) {
+        // Threshold met — close
+        handleClose("drag");
+      }
+      setPullDownOffset(0);
+    }
+  }, [pullDownOffset, handleClose]);
+  
+  // Header drag handlers for expansion (drag up to expand to 90vh)
+  const handleHeaderTouchStart = useCallback((e: React.TouchEvent) => {
+    headerTouchStartY.current = e.touches[0].clientY;
+  }, []);
+  
+  const handleHeaderTouchMove = useCallback((e: React.TouchEvent) => {
+    if (headerTouchStartY.current === null) return;
+    
+    const touchCurrentY = e.touches[0].clientY;
+    const deltaY = touchCurrentY - headerTouchStartY.current;
+    
+    // If user is dragging UP (negative deltaY) by at least 30px, expand to 90vh
+    if (deltaY < -30) {
+      setExpandedHeight(90);
+    }
+  }, []);
+  
+  const handleHeaderTouchEnd = useCallback(() => {
+    headerTouchStartY.current = null;
+  }, []);
+  
+  // Combined header handlers (expansion + close)
+  const combinedHeaderHandlers = {
+    ...handlers,
+    onTouchStart: (e: React.TouchEvent) => {
+      handleHeaderTouchStart(e);
+      handlers.onTouchStart(e);
+    },
+    onTouchMove: (e: React.TouchEvent) => {
+      handleHeaderTouchMove(e);
+      handlers.onTouchMove(e);
+    },
+    onTouchEnd: () => {
+      handleHeaderTouchEnd();
+      handlers.onTouchEnd();
+    },
+  };
 
   // Handle animation state
   const isVisible = useMessageAnimation(message);
@@ -94,19 +186,19 @@ export default function MessageDetailView({
   if (!message) return null;
 
   // Determine which drag is active
-  const activeDragOffset = isOverscrollDragging
-    ? overscrollDragOffset
+  const activeDragOffset = pullDownOffset > 0
+    ? pullDownOffset
     : isDragging
       ? dragOffset
       : 0;
-  const isAnyDragging = isDragging || isOverscrollDragging;
+  const isAnyDragging = isDragging || pullDownOffset > 0;
 
   return (
     <aside
       ref={scrollContainerRef}
       aria-label="Детайли за сигнала"
       className={`fixed ${zIndex.overlayContent} bg-white shadow-2xl overflow-y-auto transition-all duration-300 ease-out
-        bottom-0 left-0 right-0 max-h-[50vh] rounded-t-2xl
+        bottom-0 left-0 right-0 rounded-t-2xl
         sm:inset-y-0 sm:left-auto sm:right-0 sm:w-96 sm:max-h-none sm:rounded-none
         ${
           isVisible
@@ -115,13 +207,19 @@ export default function MessageDetailView({
         }
       `}
       onScroll={handleScroll}
+      onTouchStart={handleContainerTouchStart}
+      onTouchMove={handleContainerTouchMove}
+      onTouchEnd={handleContainerTouchEnd}
       style={{
         transform: isAnyDragging ? `translateY(${activeDragOffset}px)` : undefined,
         transition: isAnyDragging ? "none" : undefined,
+        maxHeight: typeof window !== 'undefined' && window.matchMedia('(min-width: 640px)').matches 
+          ? undefined 
+          : `${expandedHeight}vh`, // Dynamic height on mobile only
       }}
     >
         <Header
-          handlers={handlers}
+          handlers={combinedHeaderHandlers}
           onClose={onClose}
           messageId={message.id}
           classification={classifyMessage(message)}
@@ -130,8 +228,7 @@ export default function MessageDetailView({
         <div
           className={`px-4 sm:px-6 py-4 pb-6 sm:pb-4 space-y-6 transition-opacity duration-500 delay-100 ${
             isVisible ? "opacity-100" : "opacity-0"
-          } ${isAtTop ? "sm:cursor-default cursor-grab active:cursor-grabbing" : ""}`}
-          {...(isAtTop ? overscrollHandlers : {})}
+          }`}
         >
           {message.finalizedAt && (
             <DetailItem title="Публикувано тук">
