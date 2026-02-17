@@ -76,7 +76,7 @@ export default function MessageDetailView({
     <aside
       aria-label="Детайли за сигнала"
       className={`fixed ${zIndex.overlayContent} bg-white shadow-2xl overflow-y-auto transition-all duration-300 ease-out
-        bottom-0 left-0 right-0 max-h-[85vh] rounded-t-2xl
+        bottom-0 left-0 right-0 max-h-[50vh] rounded-t-2xl
         sm:inset-y-0 sm:left-auto sm:right-0 sm:w-96 sm:max-h-none sm:rounded-none
         ${
           isVisible
