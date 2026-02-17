@@ -66,9 +66,15 @@ export function useMapNavigation() {
     (lat: number, lng: number) => {
       if (centerMapFn) {
         centerMapFn(lat, lng, 18);
+        // On mobile, offset the center upward so the pin appears above the details panel
+        if (mapInstance && window.innerWidth < 640) {
+          setTimeout(() => {
+            mapInstance.panBy(0, window.innerHeight * 0.2);
+          }, 50);
+        }
       }
     },
-    [centerMapFn],
+    [centerMapFn, mapInstance],
   );
 
   return {
