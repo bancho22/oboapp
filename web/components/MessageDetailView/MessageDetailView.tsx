@@ -227,7 +227,9 @@ export default function MessageDetailView({
       onTouchEnd={handleContainerTouchEnd}
       style={{
         transform: isAnyDragging ? `translateY(${activeDragOffset}px)` : undefined,
-        transition: isAnyDragging ? "none" : undefined,
+        transition: isAnyDragging 
+          ? "max-height 300ms ease-out, opacity 300ms ease-out" // Keep height/opacity transitions during drag
+          : undefined,
         maxHeight: isMobile ? `${expandedHeight}vh` : undefined,
         overscrollBehaviorY: "contain", // Prevent pull-to-refresh on mobile
       }}
