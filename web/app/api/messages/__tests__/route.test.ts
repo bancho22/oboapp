@@ -243,6 +243,20 @@ describe("GET /api/messages - Query Parameter Validation", () => {
     expect(parsed.data?.west).toBe(23.25);
     expect(parsed.data?.zoom).toBe(15);
   });
+
+  it("should accept valid timespanEndGte ISO timestamp", async () => {
+    const mockRequest = new Request(
+      "http://localhost/api/messages?timespanEndGte=2026-02-23T00:00:00.000Z",
+    );
+    const { searchParams } = new URL(mockRequest.url);
+    const { messagesQuerySchema } = await import("@/lib/api-query.schema");
+    const parsed = messagesQuerySchema.safeParse(
+      Object.fromEntries(searchParams.entries()),
+    );
+
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.timespanEndGte).toBeInstanceOf(Date);
+  });
 });
 
 describe("GET /api/messages - Date Filtering", () => {
@@ -409,6 +423,38 @@ describe("GET /api/messages - Date Filtering", () => {
       "msg-end-middle",
       "msg-end-earliest",
     ]);
+  });
+
+  it("should use timespanEndGte query parameter as cutoff when provided", async () => {
+    const now = new Date("2026-02-23T12:00:00.000Z");
+    const todayStart = new Date("2026-02-23T00:00:00.000Z");
+    const yesterday = new Date("2026-02-22T23:59:59.000Z");
+
+    mockMessagesData = [
+      {
+        _id: "msg-yesterday",
+        text: "Yesterday",
+        geoJson: createMockGeoJson(),
+        createdAt: now,
+        timespanEnd: yesterday,
+      },
+      {
+        _id: "msg-today",
+        text: "Today",
+        geoJson: createMockGeoJson(),
+        createdAt: now,
+        timespanEnd: todayStart,
+      },
+    ];
+
+    const mockRequest = new Request(
+      "http://localhost/api/messages?timespanEndGte=2026-02-23T00:00:00.000Z",
+    );
+    const response = await GET(mockRequest);
+    const data = await response.json();
+
+    expect(data.messages).toHaveLength(1);
+    expect(data.messages[0].id).toBe("msg-today");
   });
 });
 

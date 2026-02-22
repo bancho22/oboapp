@@ -31,6 +31,7 @@ export const messagesQuerySchema = z.object({
   zoom: finiteNumber.min(1).max(22).optional(),
   categories: commaDelimitedCategories.optional(),
   sources: commaDelimitedSources.optional(),
+  timespanEndGte: z.coerce.date().optional(),
 });
 
 export type MessagesQuery = z.infer<typeof messagesQuerySchema>;
