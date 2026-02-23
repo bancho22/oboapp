@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getLocalityMetadata } from "@oboapp/shared";
+import { getLocalityDescription } from "@oboapp/shared";
 
 /**
  * Dynamic web app manifest generation based on NEXT_PUBLIC_LOCALITY
@@ -12,12 +12,10 @@ export async function GET() {
     throw new Error("NEXT_PUBLIC_LOCALITY environment variable is required");
   }
 
-  const metadata = getLocalityMetadata(locality);
-  
   const manifest = {
     name: "OboApp",
     short_name: "OboApp",
-    description: metadata.description,
+    description: getLocalityDescription(locality),
     start_url: "/",
     scope: "/",
     display: "standalone",
