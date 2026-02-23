@@ -36,8 +36,6 @@ export const CENTERS: Record<string, CenterDefinition> = {
 
 export interface LocalityMetadata {
   name: string; // Display name in the local language
-  nameEn?: string; // English display name (optional)
-  country: string; // Country code (e.g., "bg")
   description?: string; // Description text for manifest/meta tags
 }
 
@@ -47,8 +45,6 @@ export interface LocalityMetadata {
 export const LOCALITY_METADATA: Record<string, LocalityMetadata> = {
   "bg.sofia": {
     name: "София",
-    nameEn: "Sofia",
-    country: "bg",
     description: "Следи събитията в София",
   },
 };

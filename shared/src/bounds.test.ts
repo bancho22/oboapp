@@ -38,8 +38,6 @@ describe("bounds", () => {
     it("should have Sofia metadata", () => {
       expect(LOCALITY_METADATA["bg.sofia"]).toMatchObject({
         name: "София",
-        nameEn: "Sofia",
-        country: "bg",
         description: "Следи събитията в София",
       });
     });
@@ -49,8 +47,6 @@ describe("bounds", () => {
     it("should return metadata for Sofia", () => {
       const metadata = getLocalityMetadata("bg.sofia");
       expect(metadata.name).toBe("София");
-      expect(metadata.nameEn).toBe("Sofia");
-      expect(metadata.country).toBe("bg");
     });
 
     it("should throw for unknown locality", () => {

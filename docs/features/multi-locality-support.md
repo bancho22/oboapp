@@ -45,8 +45,6 @@ Display names and descriptions are stored in the shared package (`@oboapp/shared
 export const LOCALITY_METADATA: Record<string, LocalityMetadata> = {
   "bg.sofia": {
     name: "София",              // Display name in local language
-    nameEn: "Sofia",            // English name (optional)
-    country: "bg",              // Country code
     description: "Следи събитията в София",  // PWA manifest description
   },
 };
@@ -90,8 +88,6 @@ Each locality requires a corresponding GeoJSON file for locality-wide messages:
      "bg.sofia": { /* existing */ },
      "bg.plovdiv": {
        name: "Пловдив",
-       nameEn: "Plovdiv",
-       country: "bg",
        description: "Следи събитията в Пловдив",
      },
    };
