@@ -17,7 +17,7 @@
   "scripts": {
     "build": "tsc -p .",
     "lint": "eslint .",
-    "test": "echo \"No tests yet\" && exit 0"
+    "test": "vitest run"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^8.4.0",
