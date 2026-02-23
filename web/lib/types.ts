@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import {
+  ApiClientSchema,
   CoordinatesSchema,
   GeoJsonFeatureCollectionSchema,
   GeoJsonFeatureSchema,
@@ -25,6 +26,8 @@ export type {
   IngestError,
   IngestErrorType,
 } from "@oboapp/shared";
+
+export type ApiClient = z.infer<typeof ApiClientSchema>;
 
 export type Address = z.infer<typeof AddressSchema>;
 
@@ -112,6 +115,7 @@ export interface NotificationMatch {
   distance?: number; // Distance in meters from interest center to closest point
   deviceNotifications?: DeviceNotification[]; // Array of device-specific sends
   messageSnapshot?: MessageSnapshot; // Denormalized message data
+  readAt?: Date | string; // When the notification was read by the user
 }
 
 // Notification History Item (for API response)

@@ -22,6 +22,11 @@ vi.mock("@/lib/db", () => ({
                   return fieldValue >= clause.value;
                 case "==":
                   return fieldValue === clause.value;
+                case "in":
+                  return (
+                    Array.isArray(clause.value) &&
+                    clause.value.includes(fieldValue)
+                  );
                 case "array-contains-any":
                   return (
                     Array.isArray(fieldValue) &&
@@ -29,11 +34,53 @@ vi.mock("@/lib/db", () => ({
                       (fieldValue as unknown[]).includes(v),
                     )
                   );
+                case "not-in":
+                  return (
+                    Array.isArray(clause.value) &&
+                    !clause.value.includes(fieldValue)
+                  );
                 default:
                   return true;
               }
             });
           }
+        }
+
+        if (options?.orderBy && Array.isArray(options.orderBy)) {
+          filtered.sort((a, b) => {
+            for (const order of options.orderBy) {
+              const aValue = a[order.field];
+              const bValue = b[order.field];
+
+              if (aValue === bValue) continue;
+
+              const aTime =
+                aValue instanceof Date
+                  ? aValue.getTime()
+                  : typeof aValue === "string"
+                    ? new Date(aValue).getTime()
+                    : null;
+              const bTime =
+                bValue instanceof Date
+                  ? bValue.getTime()
+                  : typeof bValue === "string"
+                    ? new Date(bValue).getTime()
+                    : null;
+
+              if (aTime !== null && bTime !== null) {
+                return order.direction === "desc"
+                  ? bTime - aTime
+                  : aTime - bTime;
+              }
+
+              const aString = String(aValue ?? "");
+              const bString = String(bValue ?? "");
+              const compare = aString.localeCompare(bString);
+              return order.direction === "desc" ? -compare : compare;
+            }
+
+            return 0;
+          });
         }
 
         return filtered;
@@ -196,6 +243,20 @@ describe("GET /api/messages - Query Parameter Validation", () => {
     expect(parsed.data?.west).toBe(23.25);
     expect(parsed.data?.zoom).toBe(15);
   });
+
+  it("should accept valid timespanEndGte ISO timestamp", async () => {
+    const mockRequest = new Request(
+      "http://localhost/api/messages?timespanEndGte=2026-02-23T00:00:00.000Z",
+    );
+    const { searchParams } = new URL(mockRequest.url);
+    const { messagesQuerySchema } = await import("@/lib/api-query.schema");
+    const parsed = messagesQuerySchema.safeParse(
+      Object.fromEntries(searchParams.entries()),
+    );
+
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.timespanEndGte).toBeInstanceOf(Date);
+  });
 });
 
 describe("GET /api/messages - Date Filtering", () => {
@@ -319,6 +380,83 @@ describe("GET /api/messages - Date Filtering", () => {
 
     // Should be included because it's within 7 days
     expect(data.messages).toHaveLength(1);
+  });
+
+  it("should return messages sorted by finalizedAt first, then timespanEnd", async () => {
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+    const oneDayLater = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const twoDaysLater = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
+
+    mockMessagesData = [
+      {
+        _id: "msg-finalized-newest",
+        text: "Newest by finalizedAt",
+        geoJson: createMockGeoJson(),
+        createdAt: twoHoursAgo,
+        finalizedAt: now,
+        timespanEnd: oneHourAgo,
+      },
+      {
+        _id: "msg-finalized-middle",
+        text: "Middle by finalizedAt",
+        geoJson: createMockGeoJson(),
+        createdAt: now,
+        finalizedAt: oneHourAgo,
+        timespanEnd: twoDaysLater,
+      },
+      {
+        _id: "msg-no-finalized-latest-end",
+        text: "No finalizedAt but latest timespanEnd",
+        geoJson: createMockGeoJson(),
+        createdAt: oneHourAgo,
+        timespanEnd: oneDayLater,
+      },
+    ];
+
+    const mockRequest = new Request("http://localhost/api/messages");
+    const response = await GET(mockRequest);
+    const data = await response.json();
+
+    expect(data.messages).toHaveLength(3);
+    expect(data.messages.map((m: any) => m.id)).toEqual([
+      "msg-finalized-newest",
+      "msg-finalized-middle",
+      "msg-no-finalized-latest-end",
+    ]);
+  });
+
+  it("should use timespanEndGte query parameter as cutoff when provided", async () => {
+    const now = new Date("2026-02-23T12:00:00.000Z");
+    const todayStart = new Date("2026-02-23T00:00:00.000Z");
+    const yesterday = new Date("2026-02-22T23:59:59.000Z");
+
+    mockMessagesData = [
+      {
+        _id: "msg-yesterday",
+        text: "Yesterday",
+        geoJson: createMockGeoJson(),
+        createdAt: now,
+        timespanEnd: yesterday,
+      },
+      {
+        _id: "msg-today",
+        text: "Today",
+        geoJson: createMockGeoJson(),
+        createdAt: now,
+        timespanEnd: todayStart,
+      },
+    ];
+
+    const mockRequest = new Request(
+      "http://localhost/api/messages?timespanEndGte=2026-02-23T00:00:00.000Z",
+    );
+    const response = await GET(mockRequest);
+    const data = await response.json();
+
+    expect(data.messages).toHaveLength(1);
+    expect(data.messages[0].id).toBe("msg-today");
   });
 });
 
