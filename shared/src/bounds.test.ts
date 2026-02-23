@@ -69,6 +69,15 @@ describe("bounds", () => {
       expect(getLocalityDescription("bg.sofia")).toBe("Следи събитията в София");
     });
 
+    it("should fall back to name-based description when description is not defined", () => {
+      LOCALITY_METADATA["test.fallback"] = { name: "Тест" };
+      try {
+        expect(getLocalityDescription("test.fallback")).toBe("Следи събитията в Тест");
+      } finally {
+        delete LOCALITY_METADATA["test.fallback"];
+      }
+    });
+
     it("should throw for unknown locality", () => {
       expect(() => getLocalityDescription("invalid")).toThrow("Unknown locality");
     });
