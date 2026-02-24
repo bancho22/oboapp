@@ -138,4 +138,51 @@ describe("bounds", () => {
       expect(() => validateLocality("invalid")).toThrow("Invalid locality");
     });
   });
+
+  describe("registry consistency", () => {
+    it("should have matching keys across BOUNDS, CENTERS, and LOCALITY_METADATA", () => {
+      const boundsKeys = Object.keys(BOUNDS).sort();
+      const centerKeys = Object.keys(CENTERS).sort();
+      const metadataKeys = Object.keys(LOCALITY_METADATA).sort();
+
+      expect(centerKeys).toEqual(boundsKeys);
+      expect(metadataKeys).toEqual(boundsKeys);
+    });
+
+    it("should throw when registries are out of sync (simulated)", () => {
+      const fakeBounds = { "x.one": {}, "y.two": {} } as Record<string, unknown>;
+      const fakeCenters = { "x.one": {} } as Record<string, unknown>;
+      const fakeMetadata = { "x.one": {}, "y.two": {}, "z.three": {} } as Record<string, unknown>;
+
+      function assertRegistriesInSync(
+        bounds: Record<string, unknown>,
+        centers: Record<string, unknown>,
+        metadata: Record<string, unknown>,
+      ): void {
+        const boundsKeys = new Set(Object.keys(bounds));
+        const centerKeys = new Set(Object.keys(centers));
+        const metadataKeys = new Set(Object.keys(metadata));
+
+        const allKeys = new Set([
+          ...boundsKeys,
+          ...centerKeys,
+          ...metadataKeys,
+        ]);
+
+        for (const key of allKeys) {
+          const inBounds = boundsKeys.has(key);
+          const inCenters = centerKeys.has(key);
+          const inMetadata = metadataKeys.has(key);
+
+          if (!(inBounds && inCenters && inMetadata)) {
+            throw new Error("Registry mismatch detected");
+          }
+        }
+      }
+
+      expect(() =>
+        assertRegistriesInSync(fakeBounds, fakeCenters, fakeMetadata),
+      ).toThrow();
+    });
+  });
 });
