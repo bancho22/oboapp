@@ -49,6 +49,32 @@ export const LOCALITY_METADATA: Record<string, LocalityMetadata> = {
   },
 };
 
+// Ensure locality registries stay in sync at startup
+const boundsLocalities = Object.keys(BOUNDS);
+const metadataLocalities = Object.keys(LOCALITY_METADATA);
+
+const boundsMissingMetadata = boundsLocalities.filter(
+  (key) => !metadataLocalities.includes(key),
+);
+const metadataMissingBounds = metadataLocalities.filter(
+  (key) => !boundsLocalities.includes(key),
+);
+
+if (boundsMissingMetadata.length > 0 || metadataMissingBounds.length > 0) {
+  throw new Error(
+    [
+      "Locality registry mismatch detected.",
+      boundsMissingMetadata.length > 0
+        ? `Localities in BOUNDS but not in LOCALITY_METADATA: ${boundsMissingMetadata.join(", ")}`
+        : null,
+      metadataMissingBounds.length > 0
+        ? `Localities in LOCALITY_METADATA but not in BOUNDS: ${metadataMissingBounds.join(", ")}`
+        : null,
+    ]
+      .filter((line) => line !== null)
+      .join(" "),
+  );
+}
 /**
  * Get metadata for a locality
  * @throws Error if locality is not found
