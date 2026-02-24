@@ -58,7 +58,6 @@ Functions:
 These are used for:
 - PWA manifest generation (`/manifest.webmanifest`)
 - Page metadata and SEO
-- Future i18n support
 
 ### GeoJSON Files
 
