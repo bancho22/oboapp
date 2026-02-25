@@ -3,6 +3,13 @@ import Script from "next/script";
 import { Sofia_Sans } from "next/font/google";
 import "./globals.css";
 import ClientLayout from "@/components/ClientLayout";
+import {
+  APP_NAME,
+  METADATA_ICON_LINKS,
+  PWA_ICON_PATHS,
+  PWA_MANIFEST_PATH,
+} from "@/lib/pwa-metadata";
+import { getConfiguredLocalityDescription } from "@/lib/locality-metadata";
 
 const sofiaSans = Sofia_Sans({
   subsets: ["latin", "cyrillic"],
@@ -10,44 +17,41 @@ const sofiaSans = Sofia_Sans({
   display: "swap",
 });
 
+const description = getConfiguredLocalityDescription();
+
 export const metadata: Metadata = {
-  title: "OboApp",
-  description: "Следи събитията в район Оборище",
+  title: APP_NAME,
+  description,
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_BASE_URL || "https://oboapp.online",
   ),
-  manifest: "/manifest.json",
+  manifest: PWA_MANIFEST_PATH,
   icons: {
     icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico" },
+      { url: PWA_ICON_PATHS.faviconSvg, type: "image/svg+xml" },
+      { url: PWA_ICON_PATHS.faviconIco },
     ],
-    apple: "/apple-touch-icon.png",
-    other: [
-      { rel: "icon", url: "/icon-32x32.png", sizes: "32x32" },
-      { rel: "icon", url: "/icon-72x72.png", sizes: "72x72" },
-      { rel: "icon", url: "/icon-192x192.png", sizes: "192x192" },
-      { rel: "icon", url: "/icon-512x512.png", sizes: "512x512" },
-    ],
+    apple: PWA_ICON_PATHS.appleTouchIcon,
+    other: [...METADATA_ICON_LINKS],
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "OboApp",
+    title: APP_NAME,
   },
   openGraph: {
-    title: "OboApp",
-    description: "Следи събитията в район Оборище",
-    images: ["/icon-512x512.png"],
+    title: APP_NAME,
+    description,
+    images: [PWA_ICON_PATHS.icon512],
     locale: "bg_BG",
     type: "website",
-    siteName: "OboApp",
+    siteName: APP_NAME,
   },
   twitter: {
     card: "summary",
-    title: "OboApp",
-    description: "Следи събитията в район Оборище",
-    images: ["/icon-512x512.png"],
+    title: APP_NAME,
+    description,
+    images: [PWA_ICON_PATHS.icon512],
   },
 };
 
