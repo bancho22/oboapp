@@ -14,7 +14,11 @@ describe("GET /manifest.webmanifest", () => {
   });
 
   afterEach(() => {
-    process.env.NEXT_PUBLIC_LOCALITY = originalEnv;
+    if (originalEnv === undefined) {
+      delete process.env.NEXT_PUBLIC_LOCALITY;
+    } else {
+      process.env.NEXT_PUBLIC_LOCALITY = originalEnv;
+    }
   });
 
   it("returns a valid manifest with locality description", async () => {
