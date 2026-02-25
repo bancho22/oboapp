@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { GET } from "./route";
+import { colors } from "@/lib/colors";
 
 vi.mock("@oboapp/shared", () => ({
   getLocalityDescription: vi.fn().mockReturnValue("Следи събитията в София"),
@@ -23,12 +24,16 @@ describe("GET /manifest.webmanifest", () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("Content-Type")).toBe("application/manifest+json");
+    expect(response.headers.get("Content-Type")).toBe(
+      "application/manifest+json",
+    );
     expect(data.name).toBe("OboApp");
     expect(data.short_name).toBe("OboApp");
     expect(data.description).toBe("Следи събитията в София");
     expect(data.start_url).toBe("/");
     expect(data.display).toBe("standalone");
+    expect(data.theme_color).toBe(colors.primary.blueDark);
+    expect(data.background_color).toBe(colors.ui.footerBg);
     expect(Array.isArray(data.icons)).toBe(true);
     expect(data.icons.length).toBeGreaterThan(0);
   });
@@ -48,7 +53,7 @@ describe("GET /manifest.webmanifest", () => {
     const response = await GET();
 
     expect(response.headers.get("Cache-Control")).toBe(
-      "public, max-age=3600, s-maxage=3600"
+      "public, max-age=3600, s-maxage=3600",
     );
   });
 
@@ -56,7 +61,7 @@ describe("GET /manifest.webmanifest", () => {
     delete process.env.NEXT_PUBLIC_LOCALITY;
 
     await expect(GET()).rejects.toThrow(
-      "NEXT_PUBLIC_LOCALITY environment variable is required"
+      "NEXT_PUBLIC_LOCALITY environment variable is required",
     );
   });
 });

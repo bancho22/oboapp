@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getLocalityDescription } from "@oboapp/shared";
+import { colors } from "@/lib/colors";
 
 /**
  * Dynamic web app manifest generation based on NEXT_PUBLIC_LOCALITY
@@ -7,7 +8,7 @@ import { getLocalityDescription } from "@oboapp/shared";
  */
 export async function GET() {
   const locality = process.env.NEXT_PUBLIC_LOCALITY;
-  
+
   if (!locality) {
     throw new Error("NEXT_PUBLIC_LOCALITY environment variable is required");
   }
@@ -20,8 +21,8 @@ export async function GET() {
     scope: "/",
     display: "standalone",
     orientation: "any",
-    theme_color: "#2c3e50",
-    background_color: "#f8f9fa",
+    theme_color: colors.primary.blueDark,
+    background_color: colors.ui.footerBg,
     lang: "bg",
     dir: "ltr",
     icons: [
