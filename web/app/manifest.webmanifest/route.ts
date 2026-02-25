@@ -10,7 +10,7 @@ export async function GET() {
   const locality = process.env.NEXT_PUBLIC_LOCALITY;
 
   if (!locality) {
-    throw new Error("NEXT_PUBLIC_LOCALITY environment variable is required");
+    throw new Error("NEXT_PUBLIC_LOCALITY is required but not set");
   }
 
   const manifest = {
