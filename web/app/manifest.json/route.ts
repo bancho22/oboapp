@@ -1,19 +1,13 @@
 import { NextResponse } from "next/server";
-import { getLocalityDescription } from "@oboapp/shared";
 import { colors } from "@/lib/colors";
 import { APP_NAME, MANIFEST_ICONS, PWA_ICON_PATHS } from "@/lib/pwa-metadata";
+import { getConfiguredLocalityDescription } from "@/lib/locality-metadata";
 
 export async function GET() {
-  const locality = process.env.NEXT_PUBLIC_LOCALITY;
-
-  if (!locality) {
-    throw new Error("NEXT_PUBLIC_LOCALITY is required but not set");
-  }
-
   const manifest = {
     name: APP_NAME,
     short_name: APP_NAME,
-    description: getLocalityDescription(locality),
+    description: getConfiguredLocalityDescription(),
     start_url: "/",
     scope: "/",
     display: "standalone",

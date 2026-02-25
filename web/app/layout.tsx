@@ -3,13 +3,13 @@ import Script from "next/script";
 import { Sofia_Sans } from "next/font/google";
 import "./globals.css";
 import ClientLayout from "@/components/ClientLayout";
-import { getLocalityDescription } from "@oboapp/shared";
 import {
   APP_NAME,
   METADATA_ICON_LINKS,
   PWA_ICON_PATHS,
   PWA_MANIFEST_PATH,
 } from "@/lib/pwa-metadata";
+import { getConfiguredLocalityDescription } from "@/lib/locality-metadata";
 
 const sofiaSans = Sofia_Sans({
   subsets: ["latin", "cyrillic"],
@@ -17,12 +17,7 @@ const sofiaSans = Sofia_Sans({
   display: "swap",
 });
 
-// Get locality-specific description
-const locality = process.env.NEXT_PUBLIC_LOCALITY;
-if (!locality) {
-  throw new Error("NEXT_PUBLIC_LOCALITY environment variable is required");
-}
-const description = getLocalityDescription(locality);
+const description = getConfiguredLocalityDescription();
 
 export const metadata: Metadata = {
   title: APP_NAME,

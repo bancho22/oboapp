@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { GET } from "./route";
 import { colors } from "@/lib/colors";
+import { LOCALITY_ENV_ERROR_MESSAGE } from "@/lib/locality-metadata";
 
 vi.mock("@oboapp/shared", () => ({
   getLocalityDescription: vi.fn().mockReturnValue("Следи събитията в София"),
@@ -64,8 +65,6 @@ describe("GET /manifest.json", () => {
   it("throws when NEXT_PUBLIC_LOCALITY is not set", async () => {
     delete process.env.NEXT_PUBLIC_LOCALITY;
 
-    await expect(GET()).rejects.toThrow(
-      "NEXT_PUBLIC_LOCALITY is required but not set",
-    );
+    await expect(GET()).rejects.toThrow(LOCALITY_ENV_ERROR_MESSAGE);
   });
 });
