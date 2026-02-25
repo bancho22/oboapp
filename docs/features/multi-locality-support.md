@@ -56,7 +56,7 @@ Functions:
 - `getLocalityDescription(locality)` - Get description (with fallback)
 
 These are used for:
-- PWA manifest generation (`/manifest.webmanifest`)
+- PWA manifest generation (`/manifest.json`)
 - Page metadata and SEO
 
 ### GeoJSON Files
