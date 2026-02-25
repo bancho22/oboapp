@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getLocalityDescription } from "@oboapp/shared";
 import { colors } from "@/lib/colors";
+import { APP_NAME, MANIFEST_ICONS, PWA_ICON_PATHS } from "@/lib/pwa-metadata";
 
 export async function GET() {
   const locality = process.env.NEXT_PUBLIC_LOCALITY;
@@ -10,8 +11,8 @@ export async function GET() {
   }
 
   const manifest = {
-    name: "OboApp",
-    short_name: "OboApp",
+    name: APP_NAME,
+    short_name: APP_NAME,
     description: getLocalityDescription(locality),
     start_url: "/",
     scope: "/",
@@ -21,32 +22,7 @@ export async function GET() {
     background_color: colors.ui.footerBg,
     lang: "bg",
     dir: "ltr",
-    icons: [
-      {
-        src: "/icon-32x32.png",
-        sizes: "32x32",
-        type: "image/png",
-        purpose: "any",
-      },
-      {
-        src: "/icon-72x72.png",
-        sizes: "72x72",
-        type: "image/png",
-        purpose: "any",
-      },
-      {
-        src: "/icon-192x192.png",
-        sizes: "192x192",
-        type: "image/png",
-        purpose: "any maskable",
-      },
-      {
-        src: "/icon-512x512.png",
-        sizes: "512x512",
-        type: "image/png",
-        purpose: "any maskable",
-      },
-    ],
+    icons: [...MANIFEST_ICONS],
     categories: ["news", "utilities"],
     shortcuts: [
       {
@@ -56,7 +32,7 @@ export async function GET() {
         url: "/sources",
         icons: [
           {
-            src: "/icon-192x192.png",
+            src: PWA_ICON_PATHS.icon192,
             sizes: "192x192",
           },
         ],
