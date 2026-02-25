@@ -11,6 +11,7 @@ import {
   getBboxForLocality,
   isWithinBounds,
   validateLocality,
+  assertLocalityRegistriesInSync,
 } from "./bounds";
 
 describe("bounds", () => {
@@ -66,20 +67,26 @@ describe("bounds", () => {
 
   describe("getLocalityDescription", () => {
     it("should return description for Sofia", () => {
-      expect(getLocalityDescription("bg.sofia")).toBe("Следи събитията в София");
+      expect(getLocalityDescription("bg.sofia")).toBe(
+        "Следи събитията в София",
+      );
     });
 
     it("should fall back to name-based description when description is not defined", () => {
       LOCALITY_METADATA["test.fallback"] = { name: "Тест" };
       try {
-        expect(getLocalityDescription("test.fallback")).toBe("Следи събитията в Тест");
+        expect(getLocalityDescription("test.fallback")).toBe(
+          "Следи събитията в Тест",
+        );
       } finally {
         delete LOCALITY_METADATA["test.fallback"];
       }
     });
 
     it("should throw for unknown locality", () => {
-      expect(() => getLocalityDescription("invalid")).toThrow("Unknown locality");
+      expect(() => getLocalityDescription("invalid")).toThrow(
+        "Unknown locality",
+      );
     });
   });
 
@@ -125,7 +132,9 @@ describe("bounds", () => {
     });
 
     it("should throw for unknown locality", () => {
-      expect(() => isWithinBounds("invalid", 42.7, 23.3)).toThrow("Unknown locality");
+      expect(() => isWithinBounds("invalid", 42.7, 23.3)).toThrow(
+        "Unknown locality",
+      );
     });
   });
 
@@ -150,39 +159,22 @@ describe("bounds", () => {
     });
 
     it("should throw when registries are out of sync (simulated)", () => {
-      const fakeBounds = { "x.one": {}, "y.two": {} } as Record<string, unknown>;
+      const fakeBounds = { "x.one": {}, "y.two": {} } as Record<
+        string,
+        unknown
+      >;
       const fakeCenters = { "x.one": {} } as Record<string, unknown>;
-      const fakeMetadata = { "x.one": {}, "y.two": {}, "z.three": {} } as Record<string, unknown>;
-
-      function assertRegistriesInSync(
-        bounds: Record<string, unknown>,
-        centers: Record<string, unknown>,
-        metadata: Record<string, unknown>,
-      ): void {
-        const boundsKeys = new Set(Object.keys(bounds));
-        const centerKeys = new Set(Object.keys(centers));
-        const metadataKeys = new Set(Object.keys(metadata));
-
-        const allKeys = new Set([
-          ...boundsKeys,
-          ...centerKeys,
-          ...metadataKeys,
-        ]);
-
-        for (const key of allKeys) {
-          const inBounds = boundsKeys.has(key);
-          const inCenters = centerKeys.has(key);
-          const inMetadata = metadataKeys.has(key);
-
-          if (!(inBounds && inCenters && inMetadata)) {
-            throw new Error("Registry mismatch detected");
-          }
-        }
-      }
+      const fakeMetadata = {
+        "x.one": {},
+        "y.two": {},
+        "z.three": {},
+      } as Record<string, unknown>;
 
       expect(() =>
-        assertRegistriesInSync(fakeBounds, fakeCenters, fakeMetadata),
-      ).toThrow();
+        assertLocalityRegistriesInSync(fakeBounds, fakeCenters, fakeMetadata),
+      ).toThrow(
+        "Locality registry mismatch detected. Missing from BOUNDS: z.three Missing from CENTERS: y.two, z.three",
+      );
     });
   });
 });

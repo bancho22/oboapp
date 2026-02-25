@@ -49,32 +49,60 @@ export const LOCALITY_METADATA: Record<string, LocalityMetadata> = {
   },
 };
 
-// Ensure locality registries stay in sync at startup
-const boundsLocalities = Object.keys(BOUNDS);
-const metadataLocalities = Object.keys(LOCALITY_METADATA);
+export function assertLocalityRegistriesInSync(
+  bounds: Record<string, unknown> = BOUNDS,
+  centers: Record<string, unknown> = CENTERS,
+  metadata: Record<string, unknown> = LOCALITY_METADATA,
+): void {
+  const boundsKeys = new Set(Object.keys(bounds));
+  const centerKeys = new Set(Object.keys(centers));
+  const metadataKeys = new Set(Object.keys(metadata));
 
-const boundsMissingMetadata = boundsLocalities.filter(
-  (key) => !metadataLocalities.includes(key),
-);
-const metadataMissingBounds = metadataLocalities.filter(
-  (key) => !boundsLocalities.includes(key),
-);
+  const allKeys = new Set([...boundsKeys, ...centerKeys, ...metadataKeys]);
 
-if (boundsMissingMetadata.length > 0 || metadataMissingBounds.length > 0) {
-  throw new Error(
-    [
-      "Locality registry mismatch detected.",
-      boundsMissingMetadata.length > 0
-        ? `Localities in BOUNDS but not in LOCALITY_METADATA: ${boundsMissingMetadata.join(", ")}`
-        : null,
-      metadataMissingBounds.length > 0
-        ? `Localities in LOCALITY_METADATA but not in BOUNDS: ${metadataMissingBounds.join(", ")}`
-        : null,
-    ]
-      .filter((line) => line !== null)
-      .join(" "),
-  );
+  const missingFromBounds: string[] = [];
+  const missingFromCenters: string[] = [];
+  const missingFromMetadata: string[] = [];
+
+  for (const key of allKeys) {
+    if (!boundsKeys.has(key)) {
+      missingFromBounds.push(key);
+    }
+    if (!centerKeys.has(key)) {
+      missingFromCenters.push(key);
+    }
+    if (!metadataKeys.has(key)) {
+      missingFromMetadata.push(key);
+    }
+  }
+
+  if (
+    missingFromBounds.length > 0 ||
+    missingFromCenters.length > 0 ||
+    missingFromMetadata.length > 0
+  ) {
+    throw new Error(
+      [
+        "Locality registry mismatch detected.",
+        missingFromBounds.length > 0
+          ? `Missing from BOUNDS: ${missingFromBounds.join(", ")}`
+          : null,
+        missingFromCenters.length > 0
+          ? `Missing from CENTERS: ${missingFromCenters.join(", ")}`
+          : null,
+        missingFromMetadata.length > 0
+          ? `Missing from LOCALITY_METADATA: ${missingFromMetadata.join(", ")}`
+          : null,
+      ]
+        .filter((line) => line !== null)
+        .join(" "),
+    );
+  }
 }
+
+// Ensure locality registries stay in sync at startup
+assertLocalityRegistriesInSync();
+
 /**
  * Get metadata for a locality
  * @throws Error if locality is not found
@@ -82,7 +110,9 @@ if (boundsMissingMetadata.length > 0 || metadataMissingBounds.length > 0) {
 export function getLocalityMetadata(locality: string): LocalityMetadata {
   const metadata = LOCALITY_METADATA[locality];
   if (!metadata) {
-    throw new Error(`Unknown locality: ${locality}. Valid localities: ${Object.keys(LOCALITY_METADATA).join(", ")}`);
+    throw new Error(
+      `Unknown locality: ${locality}. Valid localities: ${Object.keys(LOCALITY_METADATA).join(", ")}`,
+    );
   }
   return metadata;
 }
@@ -111,7 +141,9 @@ export function getLocalityDescription(locality: string): string {
 export function getBoundsForLocality(locality: string): BoundsDefinition {
   const bounds = BOUNDS[locality];
   if (!bounds) {
-    throw new Error(`Unknown locality: ${locality}. Valid localities: ${Object.keys(BOUNDS).join(", ")}`);
+    throw new Error(
+      `Unknown locality: ${locality}. Valid localities: ${Object.keys(BOUNDS).join(", ")}`,
+    );
   }
   return bounds;
 }
@@ -123,7 +155,9 @@ export function getBoundsForLocality(locality: string): BoundsDefinition {
 export function getCenterForLocality(locality: string): CenterDefinition {
   const center = CENTERS[locality];
   if (!center) {
-    throw new Error(`Unknown locality: ${locality}. Valid localities: ${Object.keys(CENTERS).join(", ")}`);
+    throw new Error(
+      `Unknown locality: ${locality}. Valid localities: ${Object.keys(CENTERS).join(", ")}`,
+    );
   }
   return center;
 }
@@ -144,7 +178,11 @@ export function getBboxForLocality(locality: string): string {
  * @param lng - Longitude
  * @throws Error if locality is not found
  */
-export function isWithinBounds(locality: string, lat: number, lng: number): boolean {
+export function isWithinBounds(
+  locality: string,
+  lat: number,
+  lng: number,
+): boolean {
   const bounds = getBoundsForLocality(locality);
   return (
     lat >= bounds.south &&
@@ -160,6 +198,8 @@ export function isWithinBounds(locality: string, lat: number, lng: number): bool
  */
 export function validateLocality(locality: string): void {
   if (!BOUNDS[locality]) {
-    throw new Error(`Invalid locality: ${locality}. Valid localities: ${Object.keys(BOUNDS).join(", ")}`);
+    throw new Error(
+      `Invalid locality: ${locality}. Valid localities: ${Object.keys(BOUNDS).join(", ")}`,
+    );
   }
 }
