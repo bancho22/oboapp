@@ -2,10 +2,6 @@ import { NextResponse } from "next/server";
 import { getLocalityDescription } from "@oboapp/shared";
 import { colors } from "@/lib/colors";
 
-/**
- * Dynamic web app manifest generation based on NEXT_PUBLIC_LOCALITY
- * Generates manifest.webmanifest with locality-specific metadata
- */
 export async function GET() {
   const locality = process.env.NEXT_PUBLIC_LOCALITY;
 

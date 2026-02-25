@@ -6,7 +6,7 @@ vi.mock("@oboapp/shared", () => ({
   getLocalityDescription: vi.fn().mockReturnValue("Следи събитията в София"),
 }));
 
-describe("GET /manifest.webmanifest", () => {
+describe("GET /manifest.json", () => {
   const originalEnv = process.env.NEXT_PUBLIC_LOCALITY;
 
   beforeEach(() => {
@@ -65,7 +65,7 @@ describe("GET /manifest.webmanifest", () => {
     delete process.env.NEXT_PUBLIC_LOCALITY;
 
     await expect(GET()).rejects.toThrow(
-      "NEXT_PUBLIC_LOCALITY environment variable is required",
+      "NEXT_PUBLIC_LOCALITY is required but not set",
     );
   });
 });
