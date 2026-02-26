@@ -74,6 +74,11 @@ export const INDEX_DEFINITIONS: IndexDefinition[] = [
     spec: { userId: 1 },
     options: { name: "userId" },
   },
+  {
+    collection: "notificationMatches",
+    spec: { userId: 1, notified: 1, readAt: 1 },
+    options: { name: "userId_notified_readAt" },
+  },
 
   // --- notificationSubscriptions ---
   {
@@ -99,6 +104,14 @@ export const INDEX_DEFINITIONS: IndexDefinition[] = [
     collection: "sources",
     spec: { sourceType: 1 },
     options: { name: "sourceType" },
+  },
+
+  // --- apiClients ---
+  // apiKey is looked up on every authenticated API request — needs an index
+  {
+    collection: "apiClients",
+    spec: { apiKey: 1 },
+    options: { name: "apiKey", unique: true },
   },
 ];
 

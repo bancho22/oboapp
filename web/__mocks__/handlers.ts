@@ -3,7 +3,8 @@ import { MOCK_MESSAGES } from "./fixtures/messages";
 import { MOCK_INTERESTS, MOCK_USER_ID } from "./fixtures/interests";
 import { MOCK_SUBSCRIPTIONS } from "./fixtures/subscriptions";
 import { MOCK_NOTIFICATION_HISTORY } from "./fixtures/notification-history";
-import type { Interest, NotificationSubscription } from "@/lib/types";
+import { MOCK_API_CLIENT } from "./fixtures/api-client";
+import type { Interest, NotificationSubscription, ApiClient } from "@/lib/types";
 import type { Message } from "@oboapp/shared";
 
 /**
@@ -14,6 +15,8 @@ import type { Message } from "@oboapp/shared";
 // In-memory state for CRUD operations
 let interests: Interest[] = [...MOCK_INTERESTS];
 let subscriptions: NotificationSubscription[] = [...MOCK_SUBSCRIPTIONS];
+let apiClient: ApiClient | null = null; // Start with no API client
+let notificationHistory = [...MOCK_NOTIFICATION_HISTORY];
 
 /**
  * Helper: Filter messages by viewport bounds
@@ -321,14 +324,75 @@ export const handlers = [
     return HttpResponse.json({ success: true, deleted });
   }),
 
-  // GET /api/notifications/history - Fetch notification history
-  http.get("/api/notifications/history", () => {
-    return HttpResponse.json(MOCK_NOTIFICATION_HISTORY);
+  // GET /api/notifications/history - Fetch notification history with pagination
+  http.get("/api/notifications/history", ({ request }) => {
+    const url = new URL(request.url);
+    
+    const rawLimit = url.searchParams.get("limit");
+    let limit = Number.parseInt(rawLimit ?? "", 10);
+    if (!Number.isFinite(limit) || limit <= 0) {
+      // Default page size when missing/invalid
+      limit = 20;
+    } else {
+      // Enforce maximum page size
+      limit = Math.min(limit, 100);
+    }
+
+    const rawOffset = url.searchParams.get("offset");
+    let offset = Number.parseInt(rawOffset ?? "", 10);
+    if (!Number.isFinite(offset) || offset < 0) {
+      // Clamp negative/invalid offsets to 0
+      offset = 0;
+    }
+
+    const items = notificationHistory.slice(offset, offset + limit);
+    const hasMore = offset + limit < notificationHistory.length;
+    const nextOffset = hasMore ? offset + limit : null;
+
+    return HttpResponse.json({ items, hasMore, nextOffset });
   }),
 
   // GET /api/notifications/history/count - Get notification count
   http.get("/api/notifications/history/count", () => {
-    return HttpResponse.json({ count: MOCK_NOTIFICATION_HISTORY.length });
+    return HttpResponse.json({ count: notificationHistory.length });
+  }),
+
+  // GET /api/notifications/unread-count - Get unread notification count
+  http.get("/api/notifications/unread-count", () => {
+    const unreadCount = notificationHistory.filter((n) => !n.readAt).length;
+    return HttpResponse.json({ count: unreadCount });
+  }),
+
+  // POST /api/notifications/mark-read - Mark a notification as read
+  http.post("/api/notifications/mark-read", async ({ request }) => {
+    const body = (await request.json()) as { notificationId: string };
+    const notification = notificationHistory.find(
+      (n) => n.id === body.notificationId,
+    );
+
+    if (!notification) {
+      return HttpResponse.json(
+        { error: "Notification not found" },
+        { status: 404 },
+      );
+    }
+
+    notification.readAt = new Date().toISOString();
+    return HttpResponse.json({ success: true });
+  }),
+
+  // POST /api/notifications/mark-all-read - Mark all notifications as read
+  http.post("/api/notifications/mark-all-read", () => {
+    const readAt = new Date().toISOString();
+    const unreadCount = notificationHistory.filter((n) => !n.readAt).length;
+
+    notificationHistory.forEach((notification) => {
+      if (!notification.readAt) {
+        notification.readAt = readAt;
+      }
+    });
+
+    return HttpResponse.json({ success: true, count: unreadCount });
   }),
 
   // DELETE /api/user - Delete user account (mock - just clear data)
@@ -336,6 +400,44 @@ export const handlers = [
     // Reset to empty state
     interests = [];
     subscriptions = [];
+    apiClient = null;
+    notificationHistory = [];
     return new HttpResponse(null, { status: 204 });
+  }),
+
+  // GET /api/api-clients - Get current user's API client
+  http.get("/api/api-clients", () => {
+    return HttpResponse.json(apiClient);
+  }),
+
+  // POST /api/api-clients - Generate a new API key
+  http.post("/api/api-clients", async ({ request }) => {
+    if (apiClient) {
+      return HttpResponse.json(
+        { error: "You already have an API key. Revoke it first to generate a new one." },
+        { status: 409 },
+      );
+    }
+    const body = (await request.json()) as { websiteUrl: string };
+    const now = new Date().toISOString();
+    apiClient = {
+      ...MOCK_API_CLIENT,
+      id: `api-client-${Date.now()}`,
+      userId: MOCK_USER_ID,
+      apiKey: `obo_mock${Math.random().toString(36).slice(2)}`,
+      websiteUrl: body.websiteUrl,
+      createdAt: now,
+      updatedAt: now,
+    };
+    return HttpResponse.json(apiClient, { status: 201 });
+  }),
+
+  // DELETE /api/api-clients - Revoke current user's API key
+  http.delete("/api/api-clients", () => {
+    if (!apiClient) {
+      return HttpResponse.json({ error: "No API client found" }, { status: 404 });
+    }
+    apiClient = null;
+    return HttpResponse.json({ success: true });
   }),
 ];
