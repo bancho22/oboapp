@@ -40,9 +40,14 @@ import { isValidMessageId } from "@oboapp/shared";
 
 type ViewMode = "zones" | "events";
 
-const VIEW_MODE_OPTIONS = [
-  { value: "zones" as const, label: "Моите зони" },
+const VIEW_MODE_OPTIONS_AUTHENTICATED = [
   { value: "events" as const, label: "Събития" },
+  { value: "zones" as const, label: "Моите зони" },
+] as const;
+
+const VIEW_MODE_OPTIONS_ANONYMOUS = [
+  { value: "events" as const, label: "Събития" },
+  { value: "zones" as const, label: "Моите зони", disabled: true },
 ] as const;
 
 /**
@@ -126,7 +131,16 @@ export default function HomeContent() {
   // Message hover state for map highlight
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   // View mode for the sidebar: "zones" (my zones) or "events" (all)
-  const [viewMode, setViewMode] = useState<ViewMode>("zones");
+  const [viewMode, setViewMode] = useState<ViewMode>("events");
+  // Reset to "events" on logout (user becomes null) so anonymous users see events
+  const [prevUser, setPrevUser] = useState(user);
+  if (user !== prevUser) {
+    setPrevUser(user);
+    if (!user) {
+      setViewMode("events");
+    }
+  }
+
   // Controls the "Добави зона" modal
   const [showAddZoneModal, setShowAddZoneModal] = useState(false);
   // Onboarding state (lifted from MapContainer for proper DOM ordering)
@@ -257,17 +271,21 @@ export default function HomeContent() {
     return null;
   }, [messageId, viewportMatch, fetchedMessage]);
 
-  // Sidebar header for logged-in users
+  // Sidebar header with segmented control (shown for all users on desktop)
+  const viewModeOptions = useMemo(
+    () => (user ? VIEW_MODE_OPTIONS_AUTHENTICATED : VIEW_MODE_OPTIONS_ANONYMOUS),
+    [user],
+  );
+
   const sidebarHeaderContent = useMemo(() => {
-    if (!user) return undefined;
     return (
       <div className="flex items-center justify-between gap-3">
         <SegmentedControl
-          options={VIEW_MODE_OPTIONS}
+          options={viewModeOptions}
           value={viewMode}
           onChange={(v) => setViewMode(v as ViewMode)}
         />
-        {viewMode === "zones" && (
+        {user && viewMode === "zones" && (
           <button
             type="button"
             onClick={() => setShowAddZoneModal(true)}
@@ -280,7 +298,7 @@ export default function HomeContent() {
         )}
       </div>
     );
-  }, [user, viewMode]);
+  }, [user, viewMode, viewModeOptions]);
 
   const handleAddZoneConfirm = useCallback(
     (zone: PendingZone) => {
@@ -434,11 +452,9 @@ export default function HomeContent() {
             )}
 
             {/* Desktop: segmented control header */}
-            {sidebarHeaderContent && (
-              <div className="mb-4 hidden [@media(min-width:1280px)_and_(min-aspect-ratio:4/3)]:block">
-                {sidebarHeaderContent}
-              </div>
-            )}
+            <div className="mb-4 hidden [@media(min-width:1280px)_and_(min-aspect-ratio:4/3)]:block">
+              {sidebarHeaderContent}
+            </div>
 
             {/* Desktop: zone list when in zones view mode */}
             {user && viewMode === "zones" && (
