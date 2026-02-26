@@ -8,11 +8,10 @@ radius (100–1000 m).
 
 When `complete`, the sidebar header shows a segmented control with two tabs:
 
-| Tab            | Content                                                                 |
-| -------------- | ----------------------------------------------------------------------- |
-| **Моите зони** | `ZoneList` — clickable list of saved zones (color dot, label, radius)   |
-| **Събития**    | `MessagesGrid` — all messages visible in the map viewport              |
-
+| Tab            | Content                                                               |
+| -------------- | --------------------------------------------------------------------- |
+| **Моите зони** | `ZoneList` — clickable list of saved zones (color dot, label, radius) |
+| **Събития**    | `MessagesGrid` — all messages visible in the map viewport             |
 
 A "Добави зона" button (visible only in the zones tab) opens the `AddZoneModal`.
 
@@ -26,23 +25,26 @@ A "Добави зона" button (visible only in the zones tab) opens the `AddZ
 
 ### Zone Editing & Deletion
 
-Right-clicking (or tapping) a zone circle on the map opens `InterestContextMenu`
-with **Move** and **Delete** actions. Move re-enters target mode with the existing
-radius pre-filled.
+- **Desktop (wide layout):** Move/Delete actions are available from the zone item menu
+  in `ZoneList` (side panel, "Моите зони" tab).
+- **Mobile and narrower layouts:** tapping a zone circle on the map opens
+  `InterestContextMenu` with **Move** and **Delete**.
+
+Move re-enters target mode with the existing radius pre-filled.
 
 ### Interest Data Model
 
 Zones are stored in the `interests` collection with these fields:
 
-| Field         | Type     | Description                            |
-| ------------- | -------- | -------------------------------------- |
-| `userId`      | string   | Owner                                  |
-| `coordinates` | {lat,lng}| Center of the zone                     |
-| `radius`      | number   | Radius in meters (100–1000)            |
-| `label`       | string?  | Zone type label (e.g. "Дома")          |
-| `color`       | string?  | Hex color from zone type (e.g. "#3B82F6") |
-| `createdAt`   | datetime | Creation timestamp                     |
-| `updatedAt`   | datetime | Last update timestamp                  |
+| Field         | Type      | Description                               |
+| ------------- | --------- | ----------------------------------------- |
+| `userId`      | string    | Owner                                     |
+| `coordinates` | {lat,lng} | Center of the zone                        |
+| `radius`      | number    | Radius in meters (100–1000)               |
+| `label`       | string?   | Zone type label (e.g. "Дома")             |
+| `color`       | string?   | Hex color from zone type (e.g. "#3B82F6") |
+| `createdAt`   | datetime  | Creation timestamp                        |
+| `updatedAt`   | datetime  | Last update timestamp                     |
 
 ### Notifications
 

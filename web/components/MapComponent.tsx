@@ -35,6 +35,7 @@ interface MapComponentProps {
   }) => void;
   readonly interests?: Interest[];
   readonly onInterestClick?: (interest: Interest) => void;
+  readonly interestsInteractive?: boolean;
   readonly targetMode?: {
     active: boolean;
     initialRadius?: number;
@@ -110,6 +111,7 @@ export default function MapComponent({
   onBoundsChanged,
   interests = [],
   onInterestClick,
+  interestsInteractive = true,
   targetMode,
   initialCenter,
   shouldTrackLocation = false,
@@ -295,11 +297,12 @@ export default function MapComponent({
           />
 
           {/* Render interest circles */}
-          {interests && interests.length > 0 && onInterestClick && (
+          {interests && interests.length > 0 && (
             <InterestCircles
               map={mapInstance}
               interests={interests}
               onInterestClick={onInterestClick}
+              interactive={interestsInteractive}
               editingInterestId={targetMode?.editingInterestId}
               hideAll={false}
             />

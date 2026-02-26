@@ -27,6 +27,7 @@ import { useMapNavigation } from "@/lib/hooks/useMapNavigation";
 import { useInterestManagement } from "@/lib/hooks/useInterestManagement";
 import { useCategoryFilter } from "@/lib/hooks/useCategoryFilter";
 import { useSourceFilter } from "@/lib/hooks/useSourceFilter";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { classifyMessage } from "@/lib/message-classification";
 import { createMessageUrl } from "@/lib/url-utils";
 import { getFeaturesCentroid } from "@/lib/geometry-utils";
@@ -39,6 +40,8 @@ import type { OnboardingState } from "@/lib/hooks/useOnboardingFlow";
 import { isValidMessageId } from "@oboapp/shared";
 
 type ViewMode = "zones" | "events";
+const WIDE_DESKTOP_MEDIA_QUERY =
+  "(min-width: 1280px) and (min-aspect-ratio: 4/3)";
 
 const VIEW_MODE_OPTIONS_AUTHENTICATED = [
   { value: "events" as const, label: "Събития" },
@@ -77,6 +80,7 @@ export default function HomeContent() {
     deleteInterest,
   } = useInterests();
   const { user } = useAuth();
+  const isWideDesktopLayout = useMediaQuery(WIDE_DESKTOP_MEDIA_QUERY);
 
   // Message fetching and viewport management
   const {
@@ -273,7 +277,8 @@ export default function HomeContent() {
 
   // Sidebar header with segmented control (shown for all users on desktop)
   const viewModeOptions = useMemo(
-    () => (user ? VIEW_MODE_OPTIONS_AUTHENTICATED : VIEW_MODE_OPTIONS_ANONYMOUS),
+    () =>
+      user ? VIEW_MODE_OPTIONS_AUTHENTICATED : VIEW_MODE_OPTIONS_ANONYMOUS,
     [user],
   );
 
@@ -312,12 +317,9 @@ export default function HomeContent() {
   const handleZoneClick = useCallback(
     (interest: Interest) => {
       if (centerMapFn) {
-        centerMapFn(
-          interest.coordinates.lat,
-          interest.coordinates.lng,
-          16,
-          { animate: true },
-        );
+        centerMapFn(interest.coordinates.lat, interest.coordinates.lng, 16, {
+          animate: true,
+        });
       }
     },
     [centerMapFn],
@@ -419,7 +421,10 @@ export default function HomeContent() {
             onFeatureClick={handleFeatureClick}
             onMapReady={handleMapReady}
             onBoundsChanged={handleBoundsChanged}
-            onInterestClick={handleInterestClick}
+            onInterestClick={
+              isWideDesktopLayout ? undefined : handleInterestClick
+            }
+            interestsInteractive={!isWideDesktopLayout}
             onSaveInterest={handleSaveInterest}
             onCancelTargetMode={handleCancelTargetMode}
             onStartAddInterest={handleStartAddInterest}
@@ -459,12 +464,23 @@ export default function HomeContent() {
             {/* Desktop: zone list when in zones view mode */}
             {user && viewMode === "zones" && (
               <div className="hidden [@media(min-width:1280px)_and_(min-aspect-ratio:4/3)]:block">
-                <ZoneList interests={interests} onZoneClick={handleZoneClick} />
+                <ZoneList
+                  interests={interests}
+                  onZoneClick={handleZoneClick}
+                  onMoveZone={handleMoveInterest}
+                  onDeleteZone={handleDeleteInterest}
+                />
               </div>
             )}
 
             {/* Messages: always visible on mobile, conditional on desktop */}
-            <div className={user && viewMode === "zones" ? "[@media(min-width:1280px)_and_(min-aspect-ratio:4/3)]:hidden" : ""}>
+            <div
+              className={
+                user && viewMode === "zones"
+                  ? "[@media(min-width:1280px)_and_(min-aspect-ratio:4/3)]:hidden"
+                  : ""
+              }
+            >
               <MessagesGrid
                 messages={filteredMessages}
                 isLoading={isLoading}
@@ -490,7 +506,7 @@ export default function HomeContent() {
       />
 
       {/* Interest Context Menu */}
-      {interestMenuPosition && selectedInterest && (
+      {!isWideDesktopLayout && interestMenuPosition && selectedInterest && (
         <InterestContextMenu
           position={interestMenuPosition}
           onMove={handleMoveInterest}

@@ -93,72 +93,77 @@ export function useInterestManagement(
     [mapInstance],
   );
 
-  const handleMoveInterest = useCallback(() => {
-    if (!selectedInterest || !centerMapFn) return;
+  const handleMoveInterest = useCallback(
+    (interestToMove?: Interest) => {
+      const interest = interestToMove ?? selectedInterest;
+      if (!interest || !centerMapFn) return;
 
-    trackEvent({
-      name: "zone_move_initiated",
-      params: {
-        zone_id: selectedInterest.id || "unknown",
-        current_radius: selectedInterest.radius,
-      },
-    });
-
-    // Center map on the interest so it stays in the same visual position
-    centerMapFn(
-      selectedInterest.coordinates.lat,
-      selectedInterest.coordinates.lng,
-      17,
-      { animate: false },
-    );
-
-    // Enter target mode with the interest being edited
-    setTargetMode({
-      active: true,
-      initialRadius: selectedInterest.radius,
-      editingInterestId: selectedInterest.id,
-      pendingColor: selectedInterest.color,
-      pendingLabel: selectedInterest.label,
-    });
-
-    // Close menu
-    setInterestMenuPosition(null);
-    setSelectedInterest(null);
-  }, [selectedInterest, centerMapFn]);
-
-  const handleDeleteInterest = useCallback(async () => {
-    if (!selectedInterest?.id) return;
-
-    try {
       trackEvent({
-        name: "zone_deleted",
+        name: "zone_move_initiated",
         params: {
-          zone_id: selectedInterest.id,
-          radius: selectedInterest.radius,
+          zone_id: interest.id || "unknown",
+          current_radius: interest.radius,
         },
       });
-      await deleteInterest(selectedInterest.id);
+
+      // Center map on the interest so it stays in the same visual position
+      centerMapFn(interest.coordinates.lat, interest.coordinates.lng, 17, {
+        animate: false,
+      });
+
+      // Enter target mode with the interest being edited
+      setTargetMode({
+        active: true,
+        initialRadius: interest.radius,
+        editingInterestId: interest.id,
+        pendingColor: interest.color,
+        pendingLabel: interest.label,
+      });
+
+      // Close menu
       setInterestMenuPosition(null);
       setSelectedInterest(null);
-    } catch (error) {
-      console.error("Failed to delete interest:", error);
+    },
+    [selectedInterest, centerMapFn],
+  );
 
-      // Check if it's a 404 (already deleted, likely a duplicate)
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes("404")) {
-        console.warn(
-          "Interest already deleted (likely a duplicate), removing from local state",
-        );
+  const handleDeleteInterest = useCallback(
+    async (interestToDelete?: Interest) => {
+      const interest = interestToDelete ?? selectedInterest;
+      if (!interest?.id) return;
+
+      try {
+        trackEvent({
+          name: "zone_deleted",
+          params: {
+            zone_id: interest.id,
+            radius: interest.radius,
+          },
+        });
+        await deleteInterest(interest.id);
         setInterestMenuPosition(null);
         setSelectedInterest(null);
-        // Refresh to sync state
-        globalThis.location.reload();
-      } else {
-        alert("Не успях да изтрия зоната. Опитай пак.");
+      } catch (error) {
+        console.error("Failed to delete interest:", error);
+
+        // Check if it's a 404 (already deleted, likely a duplicate)
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes("404")) {
+          console.warn(
+            "Interest already deleted (likely a duplicate), removing from local state",
+          );
+          setInterestMenuPosition(null);
+          setSelectedInterest(null);
+          // Refresh to sync state
+          globalThis.location.reload();
+        } else {
+          alert("Не успях да изтрия зоната. Опитай пак.");
+        }
       }
-    }
-  }, [selectedInterest, deleteInterest]);
+    },
+    [selectedInterest, deleteInterest],
+  );
 
   const handleStartAddInterest = useCallback(
     (config?: { label?: string; color?: string; radius?: number }) => {
@@ -199,7 +204,13 @@ export function useInterestManagement(
         }
       })();
     },
-    [targetMode.editingInterestId, targetMode.pendingLabel, targetMode.pendingColor, addInterest, updateInterest],
+    [
+      targetMode.editingInterestId,
+      targetMode.pendingLabel,
+      targetMode.pendingColor,
+      addInterest,
+      updateInterest,
+    ],
   );
 
   const handleCancelTargetMode = useCallback(() => {

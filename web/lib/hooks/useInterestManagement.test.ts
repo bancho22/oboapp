@@ -214,11 +214,13 @@ describe("useInterestManagement", () => {
       expect(centerMapFn).toHaveBeenCalledWith(42.7, 23.3, 17, {
         animate: false,
       });
-      expect(result.current.targetMode).toEqual({
-        active: true,
-        initialRadius: 500,
-        editingInterestId: "test-id",
-      });
+      expect(result.current.targetMode).toEqual(
+        expect.objectContaining({
+          active: true,
+          initialRadius: 500,
+          editingInterestId: "test-id",
+        }),
+      );
       expect(result.current.interestMenuPosition).toBeNull();
       expect(result.current.selectedInterest).toBeNull();
       expect(trackEvent).toHaveBeenCalledWith({
@@ -228,6 +230,34 @@ describe("useInterestManagement", () => {
           current_radius: 500,
         },
       });
+    });
+
+    it("should move a provided interest without requiring prior selection", () => {
+      const { result } = renderHook(() =>
+        useInterestManagement(
+          centerMapFn,
+          mapInstance,
+          addInterest,
+          updateInterest,
+          deleteInterest,
+        ),
+      );
+
+      const mockInterest = createMockInterest({ id: "from-list" });
+
+      act(() => {
+        result.current.handleMoveInterest(mockInterest);
+      });
+
+      expect(centerMapFn).toHaveBeenCalledWith(42.7, 23.3, 17, {
+        animate: false,
+      });
+      expect(result.current.targetMode).toEqual(
+        expect.objectContaining({
+          active: true,
+          editingInterestId: "from-list",
+        }),
+      );
     });
   });
 
@@ -283,6 +313,28 @@ describe("useInterestManagement", () => {
           radius: 500,
         },
       });
+    });
+
+    it("should delete a provided interest without requiring prior selection", async () => {
+      const { result } = renderHook(() =>
+        useInterestManagement(
+          centerMapFn,
+          mapInstance,
+          addInterest,
+          updateInterest,
+          deleteInterest,
+        ),
+      );
+
+      const mockInterest = createMockInterest({ id: "from-list-delete" });
+
+      await act(async () => {
+        await result.current.handleDeleteInterest(mockInterest);
+      });
+
+      expect(deleteInterest).toHaveBeenCalledWith("from-list-delete");
+      expect(result.current.selectedInterest).toBeNull();
+      expect(result.current.interestMenuPosition).toBeNull();
     });
 
     it("should handle 404 error gracefully and reload", async () => {
@@ -360,11 +412,13 @@ describe("useInterestManagement", () => {
         result.current.handleStartAddInterest();
       });
 
-      expect(result.current.targetMode).toEqual({
-        active: true,
-        initialRadius: 500,
-        editingInterestId: null,
-      });
+      expect(result.current.targetMode).toEqual(
+        expect.objectContaining({
+          active: true,
+          initialRadius: 500,
+          editingInterestId: null,
+        }),
+      );
     });
   });
 
@@ -588,11 +642,13 @@ describe("useInterestManagement", () => {
       act(() => {
         result.current.handleStartAddInterest();
       });
-      expect(result.current.targetMode).toEqual({
-        active: true,
-        initialRadius: 500,
-        editingInterestId: null,
-      });
+      expect(result.current.targetMode).toEqual(
+        expect.objectContaining({
+          active: true,
+          initialRadius: 500,
+          editingInterestId: null,
+        }),
+      );
 
       // Save interest
       act(() => {

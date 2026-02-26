@@ -42,7 +42,8 @@ interface MapContainerProps {
     west: number;
     zoom: number;
   }) => void;
-  readonly onInterestClick: (interest: Interest) => void;
+  readonly onInterestClick?: (interest: Interest) => void;
+  readonly interestsInteractive?: boolean;
   readonly onSaveInterest: (
     coordinates: { lat: number; lng: number },
     radius: number,
@@ -79,6 +80,7 @@ export default function MapContainer({
   onMapReady,
   onBoundsChanged,
   onInterestClick,
+  interestsInteractive = true,
   onSaveInterest,
   onCancelTargetMode,
   onStartAddInterest,
@@ -263,6 +265,7 @@ export default function MapContainer({
         onBoundsChanged={onBoundsChanged}
         interests={interests}
         onInterestClick={onInterestClick}
+        interestsInteractive={interestsInteractive}
         initialCenter={initialMapCenter || undefined}
         shouldTrackLocation={isTrackingLocation}
         hoveredMessageId={hoveredMessageId}
