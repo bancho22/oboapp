@@ -1,5 +1,8 @@
 dist/
 
+# promptfoo eval cache and results
+.promptfoo/
+
 # Copied during Docker build
 docker-shared/
 

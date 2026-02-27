@@ -267,6 +267,15 @@ flowchart LR
 - `categories` (array-contains) + `finalizedAt` (descending) - Legacy category filtering
 - Deploy via `firebase deploy --only firestore:indexes` before code changes
 
+**Prompt Evaluation (promptfoo):**
+
+All three prompts have eval configs in `ingest/evals/` using [promptfoo](https://www.promptfoo.dev/). Run before merging prompt or schema changes:
+
+- `pnpm promptfoo` — evaluates all 3 prompts against source fixtures with schema + behavioral assertions
+- `pnpm promptfoo:redteam` — runs adversarial inputs (prompt injection, data exfiltration, off-topic steering)
+- `pnpm promptfoo:view` — opens the web dashboard to inspect results
+- Custom assertions in `ingest/evals/assertions.ts` reuse the same Zod schemas as production
+
 ### Crawler Development
 
 - **Stable IDs:** Generate document IDs from stable data (e.g., CMS ID), not transient URLs.

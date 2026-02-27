@@ -1,0 +1,92 @@
+# promptfoo eval config for Step 1: Filter & Split
+# Evaluates the filter-split prompt against source fixtures.
+# Run: pnpm promptfoo:filter
+
+description: "Filter & Split — relevance detection and message splitting"
+
+providers:
+  - id: "file://provider.ts"
+    config:
+      promptFile: "filter-split.md"
+    label: "Gemini (filter-split)"
+
+# The prompt template is baked into the provider via systemInstruction.
+# This is the user message template — {{input}} is replaced by test vars.
+prompts:
+  - "{{input}}"
+
+defaultTest:
+  assert:
+    # Every output must be valid JSON conforming to FilterSplitResponseSchema
+    - type: javascript
+      value: "file://assertions.ts:validateFilterSplitSchema"
+
+tests:
+  # Irrelevant content — should be detected and filtered out
+  - vars:
+      input: "file://../__mocks__/fixtures/sources/irrelevant-message.md"
+    assert:
+      - type: javascript
+        value: "file://assertions.ts:assertIrrelevant"
+
+  # Simple single message — should produce 1 relevant message
+  - vars:
+      input: "file://../__mocks__/fixtures/sources/single-simple-message.md"
+    assert:
+      - type: javascript
+        value: "file://assertions.ts:assertRelevant"
+      - type: javascript
+        value: "file://assertions.ts:assertMessageCount"
+        config:
+          value: 1
+
+  # Multiple locations — still 1 message (locations, not separate messages)
+  - vars:
+      input: "file://../__mocks__/fixtures/sources/single-message-multiple-locations.md"
+    assert:
+      - type: javascript
+        value: "file://assertions.ts:assertRelevant"
+      - type: javascript
+        value: "file://assertions.ts:assertMessageCount"
+        config:
+          value: 1
+
+  # Multiple timespans — still 1 message
+  - vars:
+      input: "file://../__mocks__/fixtures/sources/single-message-mutiple-timespans.md"
+    assert:
+      - type: javascript
+        value: "file://assertions.ts:assertRelevant"
+      - type: javascript
+        value: "file://assertions.ts:assertMessageCount"
+        config:
+          value: 1
+
+  # Complex single message
+  - vars:
+      input: "file://../__mocks__/fixtures/sources/complex-single-message.md"
+    assert:
+      - type: javascript
+        value: "file://assertions.ts:assertRelevant"
+
+  # Complex multi-message — should split into multiple relevant messages
+  - vars:
+      input: "file://../__mocks__/fixtures/sources/complex-multi-message.md"
+    assert:
+      - type: javascript
+        value: "file://assertions.ts:assertRelevant"
+
+  # Two messages — should split into exactly 2
+  - vars:
+      input: "file://../__mocks__/fixtures/sources/two-messages-simple.md"
+    assert:
+      - type: javascript
+        value: "file://assertions.ts:assertRelevant"
+      - type: javascript
+        value: "file://assertions.ts:assertMessageCount"
+        config:
+          value: 2
+
+  # Insufficient content — may be irrelevant or produce minimal output
+  - vars:
+      input: "file://../__mocks__/fixtures/sources/insufficient.md"

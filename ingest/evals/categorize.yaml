@@ -1,0 +1,70 @@
+# promptfoo eval config for Step 2: Categorize
+# Evaluates the categorize prompt against pre-split message texts.
+# Run: pnpm promptfoo:categorize
+#
+# Note: Categorize receives plainText (output of filter-split step 1),
+# not the raw source text. We use the source fixtures directly here since
+# they're close enough for eval purposes and avoid coupling to step 1 output.
+
+description: "Categorize — category classification accuracy"
+
+providers:
+  - id: "file://provider.ts"
+    config:
+      promptFile: "categorize.md"
+    label: "Gemini (categorize)"
+
+prompts:
+  - "{{input}}"
+
+defaultTest:
+  assert:
+    # Every output must conform to CategorizationResponseSchema
+    - type: javascript
+      value: "file://assertions.ts:validateCategorizeSchema"
+
+tests:
+  # Football parking restriction — expect parking/traffic/sports
+  - vars:
+      input: "file://../__mocks__/fixtures/sources/single-simple-message.md"
+    assert:
+      - type: javascript
+        value: "file://assertions.ts:assertContainsCategory"
+        config:
+          value: "parking,traffic,sports,road-block"
+
+  # Sidewalk repairs — expect construction-and-repairs
+  - vars:
+      input: "file://../__mocks__/fixtures/sources/single-message-multiple-locations.md"
+    assert:
+      - type: javascript
+        value: "file://assertions.ts:assertContainsCategory"
+        config:
+          value: "construction-and-repairs"
+
+  # Film shooting with timespans — expect traffic/road-block
+  - vars:
+      input: "file://../__mocks__/fixtures/sources/single-message-mutiple-timespans.md"
+    assert:
+      - type: javascript
+        value: "file://assertions.ts:assertContainsCategory"
+        config:
+          value: "traffic,road-block"
+
+  # Complex single message (bus rerouting + street closure)
+  - vars:
+      input: "file://../__mocks__/fixtures/sources/complex-single-message.md"
+    assert:
+      - type: javascript
+        value: "file://assertions.ts:assertContainsCategory"
+        config:
+          value: "public-transport,traffic,road-block,construction-and-repairs"
+
+  # Complex multi-message (transit + road)
+  - vars:
+      input: "file://../__mocks__/fixtures/sources/complex-multi-message.md"
+    assert:
+      - type: javascript
+        value: "file://assertions.ts:assertContainsCategory"
+        config:
+          value: "public-transport,traffic,road-block,construction-and-repairs"
