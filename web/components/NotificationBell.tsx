@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useIsMobile } from "@/lib/hooks/useMediaQuery";
+import { fetchWithAuth } from "@/lib/auth-fetch";
 import NotificationDropdown from "./NotificationDropdown";
 import UnreadIndicator from "./UnreadIndicator";
 
@@ -23,10 +24,7 @@ export default function NotificationBell() {
     if (!user) return;
 
     try {
-      const token = await user.getIdToken();
-      const response = await fetch("/api/notifications/unread-count", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetchWithAuth(user, "/api/notifications/unread-count");
 
       if (!response.ok) {
         throw new Error("Failed to fetch unread count");

@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import MapContainer from "@/components/MapContainer";
-import MessageDetailView from "@/components/MessageDetailView";
+import MessageDetailView from "@/components/MessageDetailView/MessageDetailView";
 import MessagesGrid from "@/components/MessagesGrid";
 import InterestContextMenu from "@/components/InterestContextMenu";
 import FilterBox from "@/components/FilterBox";

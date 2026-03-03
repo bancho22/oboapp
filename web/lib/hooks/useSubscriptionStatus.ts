@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { User } from "firebase/auth";
+import { fetchWithAuth } from "@/lib/auth-fetch";
 
 export interface SubscriptionStatus {
   isCurrentDeviceSubscribed: boolean;
@@ -30,9 +31,8 @@ export function useSubscriptionStatus(user: User | null): SubscriptionStatus {
       setIsLoading(true);
 
       // Check if Firebase Messaging is supported
-      const { isMessagingSupported } = await import(
-        "@/lib/notification-service"
-      );
+      const { isMessagingSupported } =
+        await import("@/lib/notification-service");
       const supported = await isMessagingSupported();
 
       if (!supported) {
@@ -76,10 +76,10 @@ export function useSubscriptionStatus(user: User | null): SubscriptionStatus {
       }
 
       // Check if this token is in the backend
-      const token = await user.getIdToken();
-      const response = await fetch("/api/notifications/subscription/all", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetchWithAuth(
+        user,
+        "/api/notifications/subscription/all",
+      );
 
       if (!response.ok) {
         setIsCurrentDeviceSubscribed(false);

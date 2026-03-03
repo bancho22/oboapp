@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Interest } from "@/lib/types";
 import { useAuth } from "@/lib/auth-context";
 import { trackEvent } from "@/lib/analytics";
+import { fetchWithAuth } from "@/lib/auth-fetch";
 
 export function useInterests() {
   const { user, loading: authLoading } = useAuth();
@@ -11,13 +12,6 @@ export function useInterests() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Helper to get auth header
-  const getAuthHeader = useCallback(async () => {
-    if (!user) return null;
-    const token = await user.getIdToken();
-    return `Bearer ${token}`;
-  }, [user]);
 
   // Fetch interests for the current user
   // Wait for auth to settle before initializing to avoid flash
@@ -38,19 +32,7 @@ export function useInterests() {
       setIsLoading(true);
       setError(null);
 
-      const authHeader = await getAuthHeader();
-      if (!authHeader) {
-        console.warn("No auth header available, skipping interest fetch");
-        setInterests([]);
-        setIsLoading(false);
-        return;
-      }
-
-      const response = await fetch("/api/interests", {
-        headers: {
-          Authorization: authHeader,
-        },
-      });
+      const response = await fetchWithAuth(user, "/api/interests");
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -104,7 +86,7 @@ export function useInterests() {
       setIsLoading(false);
       setHasInitialized(true);
     }
-  }, [user, authLoading, getAuthHeader]);
+  }, [user, authLoading]);
 
   // Add a new interest
   const addInterest = useCallback(
@@ -118,16 +100,10 @@ export function useInterests() {
       }
 
       try {
-        const authHeader = await getAuthHeader();
-        if (!authHeader) {
-          throw new Error("Failed to get auth token");
-        }
-
-        const response = await fetch("/api/interests", {
+        const response = await fetchWithAuth(user, "/api/interests", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: authHeader,
           },
           body: JSON.stringify({ coordinates, radius, ...metadata }),
         });
@@ -172,7 +148,7 @@ export function useInterests() {
         throw err;
       }
     },
-    [user, getAuthHeader],
+    [user],
   );
 
   // Update an existing interest (move or change radius)
@@ -189,16 +165,10 @@ export function useInterests() {
       }
 
       try {
-        const authHeader = await getAuthHeader();
-        if (!authHeader) {
-          throw new Error("Failed to get auth token");
-        }
-
-        const response = await fetch("/api/interests", {
+        const response = await fetchWithAuth(user, "/api/interests", {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
-            Authorization: authHeader,
           },
           body: JSON.stringify({ id, ...updates }),
         });
@@ -225,7 +195,7 @@ export function useInterests() {
         throw err;
       }
     },
-    [user, getAuthHeader],
+    [user],
   );
 
   // Delete an interest
@@ -236,16 +206,8 @@ export function useInterests() {
       }
 
       try {
-        const authHeader = await getAuthHeader();
-        if (!authHeader) {
-          throw new Error("Failed to get auth token");
-        }
-
-        const response = await fetch(`/api/interests?id=${id}`, {
+        const response = await fetchWithAuth(user, `/api/interests?id=${id}`, {
           method: "DELETE",
-          headers: {
-            Authorization: authHeader,
-          },
         });
 
         if (!response.ok) {
@@ -270,7 +232,7 @@ export function useInterests() {
         throw err;
       }
     },
-    [user, getAuthHeader],
+    [user],
   );
 
   // Fetch interests when user logs in

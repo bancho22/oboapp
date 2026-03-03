@@ -64,7 +64,7 @@ vi.mock("@/components/MapContainer", () => ({
   },
 }));
 
-vi.mock("@/components/MessageDetailView", () => ({
+vi.mock("@/components/MessageDetailView/MessageDetailView", () => ({
   default: () => <div data-testid="message-detail-view" />,
 }));
 

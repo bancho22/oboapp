@@ -6,10 +6,9 @@ import { useAuth } from "@/lib/auth-context";
 import { trackEvent } from "@/lib/analytics";
 import { NotificationSubscription } from "@/lib/types";
 import {
-  subscribeToPushNotifications,
-  requestNotificationPermission,
+  subscribeCurrentDeviceForUser,
+  getEnableNotificationsMessage,
   markExplicitUnsubscribe,
-  getNotificationPermission,
 } from "@/lib/notification-service";
 import { getMessaging, getToken } from "firebase/messaging";
 import { app } from "@/lib/firebase";
@@ -23,6 +22,7 @@ import ApiAccessSection from "./ApiAccessSection";
 import type { ApiClient } from "@/lib/types";
 import { buttonStyles, buttonSizes } from "@/lib/theme";
 import { borderRadius } from "@/lib/colors";
+import { fetchWithAuth } from "@/lib/auth-fetch";
 
 export default function SettingsPage() {
   const {
@@ -60,21 +60,14 @@ export default function SettingsPage() {
       setIsLoading(true);
       setError(null);
 
-      const token = await user.getIdToken();
-      const authHeader = `Bearer ${token}`;
-
-      const subscriptionsRes = await fetch(
+      const subscriptionsRes = await fetchWithAuth(
+        user,
         "/api/notifications/subscription/all",
-        {
-          headers: { Authorization: authHeader },
-        },
       );
 
       let apiClientRes: Response | null = null;
       if (!isGuestUser) {
-        apiClientRes = await fetch("/api/api-clients", {
-          headers: { Authorization: authHeader },
-        });
+        apiClientRes = await fetchWithAuth(user, "/api/api-clients");
       }
 
       if (!subscriptionsRes.ok) {
@@ -151,44 +144,21 @@ export default function SettingsPage() {
     if (!user) return;
 
     try {
-      // Check if Firebase Messaging is supported first
-      const { isMessagingSupported } =
-        await import("@/lib/notification-service");
-      const supported = await isMessagingSupported();
-
-      if (!supported) {
-        alert(
-          "За съжаление, този браузър не поддържа известия.\n\n" +
-            "На iOS Safari е необходимо да добавите приложението към началния екран " +
-            "преди да можете да получавате известия.",
-        );
+      const result = await subscribeCurrentDeviceForUser(user);
+      if (!result.ok) {
+        alert(getEnableNotificationsMessage(result.reason));
+        if (user.isAnonymous) {
+          trackEvent({
+            name: "guest_push_failed",
+            params: { source: "settings" },
+          });
+        }
         return;
       }
 
-      // Check if notifications are blocked
-      const currentPermission = getNotificationPermission();
-      if (currentPermission === "denied") {
-        alert(
-          "Известията са блокирани в браузъра. За да ги разрешите:\n\n" +
-            "1. Кликнете на иконката на катинара/информацията до адресната лента\n" +
-            "2. Намерете настройките за известия\n" +
-            "3. Разрешете известията за този сайт\n" +
-            "4. Презаредете страницата",
-        );
-        return;
-      }
-
-      const granted = await requestNotificationPermission();
-      if (!granted) {
-        alert("Моля, разрешете известия в браузъра");
-        return;
-      }
-
-      const token = await user.getIdToken();
-      const subscription = await subscribeToPushNotifications(user.uid, token);
       if (user.isAnonymous) {
         trackEvent({
-          name: subscription ? "guest_push_enabled" : "guest_push_failed",
+          name: "guest_push_enabled",
           params: { source: "settings" },
         });
       }
@@ -209,14 +179,13 @@ export default function SettingsPage() {
     if (!user) return;
 
     try {
-      const token = await user.getIdToken();
-      const response = await fetch(
+      const response = await fetchWithAuth(
+        user,
         `/api/notifications/subscription?token=${encodeURIComponent(
           deviceToken,
         )}`,
         {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
         },
       );
 
@@ -243,11 +212,13 @@ export default function SettingsPage() {
     }
 
     try {
-      const token = await user.getIdToken();
-      const response = await fetch("/api/notifications/subscription/all", {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetchWithAuth(
+        user,
+        "/api/notifications/subscription/all",
+        {
+          method: "DELETE",
+        },
+      );
 
       if (!response.ok) {
         throw new Error("Failed to unsubscribe all");
@@ -283,10 +254,8 @@ export default function SettingsPage() {
       }
 
       // Step 2: Delete all user data from backend
-      const token = await user!.getIdToken();
-      const response = await fetch("/api/user", {
+      const response = await fetchWithAuth(user!, "/api/user", {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!response.ok) {
@@ -311,11 +280,9 @@ export default function SettingsPage() {
     if (!user) return false;
     setIsApiClientLoading(true);
     try {
-      const token = await user.getIdToken();
-      const response = await fetch("/api/api-clients", {
+      const response = await fetchWithAuth(user, "/api/api-clients", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ websiteUrl }),
@@ -341,10 +308,8 @@ export default function SettingsPage() {
     if (!user) return false;
     setIsApiClientLoading(true);
     try {
-      const token = await user.getIdToken();
-      const response = await fetch("/api/api-clients", {
+      const response = await fetchWithAuth(user, "/api/api-clients", {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) {
         alert("Грешка при отмяна на API ключа");

@@ -7,6 +7,7 @@ import {
   isSupported,
   deleteToken,
 } from "firebase/messaging";
+import type { User } from "firebase/auth";
 import { app } from "./firebase";
 import { NotificationSubscription } from "./types";
 
@@ -85,6 +86,82 @@ export function getNotificationPermission(): NotificationPermission {
     return "denied";
   }
   return Notification.permission;
+}
+
+const NOTIFICATIONS_UNSUPPORTED_MESSAGE =
+  "За съжаление, този браузър не поддържа известия.\n\n" +
+  "На iOS Safari е необходимо да добавите приложението към началния екран " +
+  "преди да можете да получавате известия.";
+
+const NOTIFICATIONS_BLOCKED_MESSAGE =
+  "Известията са блокирани в браузъра. За да ги разрешите:\n\n" +
+  "1. Кликнете на иконката на катинара/информацията до адресната лента\n" +
+  "2. Намерете настройките за известия\n" +
+  "3. Разрешете известията за този сайт\n" +
+  "4. Презаредете страницата";
+
+const NOTIFICATIONS_PERMISSION_REQUIRED_MESSAGE =
+  "Моля, разрешете известия в браузъра";
+
+const NOTIFICATIONS_SUBSCRIBE_FAILED_MESSAGE = "Грешка при абонирането";
+
+type EnableNotificationsFailureReason =
+  | "unsupported"
+  | "blocked"
+  | "permission-denied"
+  | "subscription-failed";
+
+export type EnableCurrentDeviceNotificationsResult =
+  | {
+      ok: true;
+      subscription: NotificationSubscription;
+    }
+  | {
+      ok: false;
+      reason: EnableNotificationsFailureReason;
+    };
+
+export function getEnableNotificationsMessage(
+  reason: EnableNotificationsFailureReason,
+): string {
+  switch (reason) {
+    case "unsupported":
+      return NOTIFICATIONS_UNSUPPORTED_MESSAGE;
+    case "blocked":
+      return NOTIFICATIONS_BLOCKED_MESSAGE;
+    case "permission-denied":
+      return NOTIFICATIONS_PERMISSION_REQUIRED_MESSAGE;
+    case "subscription-failed":
+      return NOTIFICATIONS_SUBSCRIBE_FAILED_MESSAGE;
+  }
+}
+
+export async function subscribeCurrentDeviceForUser(
+  user: User,
+): Promise<EnableCurrentDeviceNotificationsResult> {
+  const supported = await isMessagingSupported();
+  if (!supported) {
+    return { ok: false, reason: "unsupported" };
+  }
+
+  const currentPermission = getNotificationPermission();
+  if (currentPermission === "denied") {
+    return { ok: false, reason: "blocked" };
+  }
+
+  const granted = await requestNotificationPermission();
+  if (!granted) {
+    return { ok: false, reason: "permission-denied" };
+  }
+
+  const token = await user.getIdToken();
+  const subscription = await subscribeToPushNotifications(user.uid, token);
+
+  if (!subscription) {
+    return { ok: false, reason: "subscription-failed" };
+  }
+
+  return { ok: true, subscription };
 }
 
 /** * Track that user explicitly unsubscribed (to prevent auto-resubscription)

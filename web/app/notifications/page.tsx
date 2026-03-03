@@ -13,10 +13,10 @@ import { borderRadius } from "@/lib/colors";
 import BackButton from "@/components/BackButton";
 import SubscribeDevicePrompt from "@/app/settings/SubscribeDevicePrompt";
 import {
-  subscribeToPushNotifications,
-  requestNotificationPermission,
-  getNotificationPermission,
+  subscribeCurrentDeviceForUser,
+  getEnableNotificationsMessage,
 } from "@/lib/notification-service";
+import { fetchWithAuth } from "@/lib/auth-fetch";
 
 export default function NotificationsPage() {
   const { user } = useAuth();
@@ -43,11 +43,8 @@ export default function NotificationsPage() {
           setError(null);
         }
 
-        const token = await user.getIdToken();
         const url = `/api/notifications/history?limit=20&offset=${offset}`;
-        const response = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await fetchWithAuth(user, url);
 
         if (!response.ok) {
           throw new Error("Failed to fetch notifications");
@@ -87,39 +84,12 @@ export default function NotificationsPage() {
     if (!user) return;
 
     try {
-      const { isMessagingSupported } =
-        await import("@/lib/notification-service");
-      const supported = await isMessagingSupported();
-
-      if (!supported) {
-        alert(
-          "За съжаление, този браузър не поддържа известия.\n\n" +
-            "На iOS Safari е необходимо да добавите приложението към началния екран " +
-            "преди да можете да получавате известия.",
-        );
+      const result = await subscribeCurrentDeviceForUser(user);
+      if (!result.ok) {
+        alert(getEnableNotificationsMessage(result.reason));
         return;
       }
 
-      const currentPermission = getNotificationPermission();
-      if (currentPermission === "denied") {
-        alert(
-          "Известията са блокирани в браузъра. За да ги разрешите:\n\n" +
-            "1. Кликнете на иконката на катинара/информацията до адресната лента\n" +
-            "2. Намерете настройките за известия\n" +
-            "3. Разрешете известията за този сайт\n" +
-            "4. Презаредете страницата",
-        );
-        return;
-      }
-
-      const granted = await requestNotificationPermission();
-      if (!granted) {
-        alert("Моля, разрешете известия в браузъра");
-        return;
-      }
-
-      const token = await user.getIdToken();
-      await subscribeToPushNotifications(user.uid, token);
       // Re-check subscription status after subscribing
       await subscriptionStatus.checkStatus();
     } catch (error) {
@@ -132,11 +102,9 @@ export default function NotificationsPage() {
     if (!user) return;
 
     try {
-      const token = await user.getIdToken();
-      const response = await fetch("/api/notifications/mark-read", {
+      const response = await fetchWithAuth(user, "/api/notifications/mark-read", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ notificationId }),
@@ -176,11 +144,9 @@ export default function NotificationsPage() {
     if (!user) return;
 
     try {
-      const token = await user.getIdToken();
-      const response = await fetch("/api/notifications/mark-all-read", {
+      const response = await fetchWithAuth(user, "/api/notifications/mark-all-read", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
