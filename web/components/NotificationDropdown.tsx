@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useRef, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { NotificationHistoryItem } from "@/lib/types";
 import Link from "next/link";
@@ -14,13 +14,8 @@ import {
   subscribeCurrentDeviceForUser,
   getEnableNotificationsMessage,
 } from "@/lib/notification-service";
-import {
-  fetchNotificationHistory,
-  fetchUnreadNotificationCount,
-  markAllNotificationsAsRead,
-  markNotificationAsRead,
-  formatNotificationDateTime,
-} from "@/lib/notification-history";
+import { formatNotificationDateTime } from "@/lib/notification-history";
+import { useNotificationHistory } from "@/lib/hooks/useNotificationHistory";
 
 interface NotificationDropdownProps {
   readonly isOpen: boolean;
@@ -37,66 +32,22 @@ export default function NotificationDropdown({
 }: NotificationDropdownProps) {
   const { user } = useAuth();
   const subscriptionStatus = useSubscriptionStatus(user);
-  const [notifications, setNotifications] = useState<NotificationHistoryItem[]>(
-    [],
-  );
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [nextOffset, setNextOffset] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const fetchNotifications = useCallback(
-    async (offset = 0, append = false) => {
-      if (!user) return;
-
-      try {
-        if (append) {
-          setIsLoadingMore(true);
-        } else {
-          setIsLoading(true);
-          setError(null);
-        }
-
-        const data = await fetchNotificationHistory(user, offset);
-
-        if (append) {
-          setNotifications((prev) => [...prev, ...(data.items || [])]);
-        } else {
-          setNotifications(data.items || []);
-        }
-
-        setHasMore(data.hasMore || false);
-        setNextOffset(data.nextOffset);
-      } catch (err) {
-        console.error("Error fetching notifications:", err);
-        // Only set error state for initial load failures
-        // Keep existing notifications visible if "Load more" fails
-        if (!append) {
-          setError("Неуспешно зареждане на известията");
-          setNotifications([]);
-        }
-      } finally {
-        setIsLoading(false);
-        setIsLoadingMore(false);
-      }
-    },
-    [user],
-  );
-
-  const handleLoadMore = useCallback(() => {
-    if (nextOffset !== null && !isLoadingMore) {
-      fetchNotifications(nextOffset, true);
-    }
-  }, [nextOffset, isLoadingMore, fetchNotifications]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    fetchNotifications();
-    // Subscription status is managed by the hook
-  }, [isOpen, fetchNotifications]);
+  const {
+    notifications,
+    isLoading,
+    isLoadingMore,
+    error,
+    hasMore,
+    loadMore,
+    markAsRead,
+    markAllRead,
+  } = useNotificationHistory({
+    user,
+    enabled: isOpen,
+    onUnreadCountChange: onCountUpdate,
+    refreshUnreadCountFromServer: true,
+  });
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -117,50 +68,6 @@ export default function NotificationDropdown({
         document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [isOpen, onClose, anchorRef]);
-
-  const handleMarkAsRead = async (notificationId: string) => {
-    if (!user) return;
-
-    try {
-      await markNotificationAsRead(user, notificationId);
-
-      // Update local state for the affected notification
-      setNotifications((prev) =>
-        prev.map((n) =>
-          n.id === notificationId
-            ? { ...n, readAt: new Date().toISOString() }
-            : n,
-        ),
-      );
-
-      // Refetch unread count from server to ensure correctness across pages
-      try {
-        const unreadCount = await fetchUnreadNotificationCount(user);
-        onCountUpdate(unreadCount);
-      } catch (countErr) {
-        console.error("Error fetching unread notification count:", countErr);
-      }
-    } catch (err) {
-      console.error("Error marking notification as read:", err);
-    }
-  };
-
-  const handleMarkAllRead = async () => {
-    if (!user) return;
-
-    try {
-      await markAllNotificationsAsRead(user);
-
-      // Update local state
-      const now = new Date().toISOString();
-      setNotifications((prev) => prev.map((n) => ({ ...n, readAt: now })));
-
-      // Update unread count
-      onCountUpdate(0);
-    } catch (err) {
-      console.error("Error marking all notifications as read:", err);
-    }
-  };
 
   const handleSubscribeCurrentDevice = async () => {
     if (!user) return;
@@ -194,7 +101,7 @@ export default function NotificationDropdown({
         {notifications.length > 0 && (
           <button
             type="button"
-            onClick={handleMarkAllRead}
+            onClick={markAllRead}
             className="text-sm text-primary hover:text-primary-hover hover:underline cursor-pointer transition-colors"
           >
             Маркирай всички прочетени
@@ -229,7 +136,7 @@ export default function NotificationDropdown({
               <NotificationItem
                 key={notification.id}
                 notification={notification}
-                onMarkAsRead={handleMarkAsRead}
+                onMarkAsRead={markAsRead}
                 onClose={onClose}
               />
             ))}
@@ -237,7 +144,7 @@ export default function NotificationDropdown({
               <div className="p-4 text-center">
                 <button
                   type="button"
-                  onClick={handleLoadMore}
+                  onClick={loadMore}
                   disabled={isLoadingMore}
                   className={`${buttonStyles.secondary} ${buttonSizes.md} ${borderRadius.md} ${isLoadingMore ? "opacity-50 cursor-not-allowed" : ""}`}
                 >

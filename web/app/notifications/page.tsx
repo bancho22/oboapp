@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { NotificationHistoryItem } from "@/lib/types";
@@ -16,67 +16,28 @@ import {
   subscribeCurrentDeviceForUser,
   getEnableNotificationsMessage,
 } from "@/lib/notification-service";
-import {
-  fetchNotificationHistory,
-  markAllNotificationsAsRead,
-  markNotificationAsRead,
-  formatNotificationDateTime,
-} from "@/lib/notification-history";
+import { formatNotificationDateTime } from "@/lib/notification-history";
+import { useNotificationHistory } from "@/lib/hooks/useNotificationHistory";
 
 export default function NotificationsPage() {
   const { user } = useAuth();
   const router = useRouter();
   const subscriptionStatus = useSubscriptionStatus(user);
-  const [notifications, setNotifications] = useState<NotificationHistoryItem[]>(
-    [],
-  );
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [nextOffset, setNextOffset] = useState<number | null>(null);
-
-  const fetchNotifications = useCallback(
-    async (offset = 0, append = false) => {
-      if (!user) return;
-
-      try {
-        if (append) {
-          setIsLoadingMore(true);
-        } else {
-          setIsLoading(true);
-          setError(null);
-        }
-
-        const data = await fetchNotificationHistory(user, offset);
-
-        if (append) {
-          setNotifications((prev) => [...prev, ...(data.items || [])]);
-        } else {
-          setNotifications(data.items || []);
-        }
-
-        setHasMore(data.hasMore || false);
-        setNextOffset(data.nextOffset);
-      } catch (err) {
-        console.error("Error fetching notifications:", err);
-        setError("Неуспешно зареждане на известията");
-        if (!append) {
-          setNotifications([]);
-        }
-      } finally {
-        setIsLoading(false);
-        setIsLoadingMore(false);
-      }
-    },
-    [user],
-  );
-
-  const handleLoadMore = useCallback(() => {
-    if (nextOffset !== null && !isLoadingMore) {
-      fetchNotifications(nextOffset, true);
-    }
-  }, [nextOffset, isLoadingMore, fetchNotifications]);
+  const {
+    notifications,
+    isLoading,
+    isLoadingMore,
+    error,
+    hasMore,
+    loadMore,
+    markAsRead,
+    markAllRead,
+  } = useNotificationHistory({
+    user,
+    enabled: true,
+    initialLoading: true,
+    emitUnreadCountEvent: true,
+  });
 
   const handleSubscribeCurrentDevice = async () => {
     if (!user) return;
@@ -96,69 +57,12 @@ export default function NotificationsPage() {
     }
   };
 
-  const handleMarkAsRead = async (notificationId: string) => {
-    if (!user) return;
-
-    try {
-      await markNotificationAsRead(user, notificationId);
-
-      setNotifications((prev) => {
-        const updatedNotifications = prev.map((n) =>
-          n.id === notificationId
-            ? { ...n, readAt: new Date().toISOString() }
-            : n,
-        );
-
-        // Notify other components (e.g., NotificationBell) to refetch unread count
-        if (typeof window !== "undefined") {
-          const newUnreadCount = updatedNotifications.filter(
-            (n) => !n.readAt,
-          ).length;
-          window.dispatchEvent(
-            new CustomEvent("notifications:unread-count-changed", {
-              detail: { count: newUnreadCount },
-            }),
-          );
-        }
-
-        return updatedNotifications;
-      });
-    } catch (err) {
-      console.error("Error marking notification as read:", err);
-    }
-  };
-
-  const handleMarkAllRead = async () => {
-    if (!user) return;
-
-    try {
-      await markAllNotificationsAsRead(user);
-
-      const now = new Date().toISOString();
-      setNotifications((prev) => prev.map((n) => ({ ...n, readAt: now })));
-
-      // Notify other components (e.g., NotificationBell) that all are now read
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(
-          new CustomEvent("notifications:unread-count-changed", {
-            detail: { count: 0 },
-          }),
-        );
-      }
-    } catch (err) {
-      console.error("Error marking all notifications as read:", err);
-    }
-  };
-
   useEffect(() => {
     if (!user) {
       router.push("/");
       return;
     }
-
-    fetchNotifications();
-    // Subscription status is managed by the hook
-  }, [user, router, fetchNotifications]);
+  }, [user, router]);
 
   if (isLoading) {
     return (
@@ -191,7 +95,7 @@ export default function NotificationsPage() {
           {notifications.length > 0 && (
             <button
               type="button"
-              onClick={handleMarkAllRead}
+              onClick={markAllRead}
               className="text-sm text-primary hover:text-primary-hover hover:underline cursor-pointer transition-colors"
             >
               Маркирай всички прочетени
@@ -226,14 +130,14 @@ export default function NotificationsPage() {
               <NotificationItem
                 key={notification.id}
                 notification={notification}
-                onMarkAsRead={handleMarkAsRead}
+                onMarkAsRead={markAsRead}
               />
             ))}
             {hasMore && (
               <div className="p-4 text-center bg-white border-t border-neutral-border">
                 <button
                   type="button"
-                  onClick={handleLoadMore}
+                  onClick={loadMore}
                   disabled={isLoadingMore}
                   className={`${buttonStyles.secondary} ${buttonSizes.md} ${borderRadius.md} ${isLoadingMore ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
