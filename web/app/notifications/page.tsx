@@ -16,7 +16,12 @@ import {
   subscribeCurrentDeviceForUser,
   getEnableNotificationsMessage,
 } from "@/lib/notification-service";
-import { fetchWithAuth } from "@/lib/auth-fetch";
+import {
+  fetchNotificationHistory,
+  markAllNotificationsAsRead,
+  markNotificationAsRead,
+  formatNotificationDateTime,
+} from "@/lib/notification-history";
 
 export default function NotificationsPage() {
   const { user } = useAuth();
@@ -43,14 +48,7 @@ export default function NotificationsPage() {
           setError(null);
         }
 
-        const url = `/api/notifications/history?limit=20&offset=${offset}`;
-        const response = await fetchWithAuth(user, url);
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch notifications");
-        }
-
-        const data = await response.json();
+        const data = await fetchNotificationHistory(user, offset);
 
         if (append) {
           setNotifications((prev) => [...prev, ...(data.items || [])]);
@@ -102,17 +100,7 @@ export default function NotificationsPage() {
     if (!user) return;
 
     try {
-      const response = await fetchWithAuth(user, "/api/notifications/mark-read", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ notificationId }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to mark as read");
-      }
+      await markNotificationAsRead(user, notificationId);
 
       setNotifications((prev) => {
         const updatedNotifications = prev.map((n) =>
@@ -144,16 +132,7 @@ export default function NotificationsPage() {
     if (!user) return;
 
     try {
-      const response = await fetchWithAuth(user, "/api/notifications/mark-all-read", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to mark all as read");
-      }
+      await markAllNotificationsAsRead(user);
 
       const now = new Date().toISOString();
       setNotifications((prev) => prev.map((n) => ({ ...n, readAt: now })));
@@ -281,13 +260,7 @@ function NotificationItem({
   const isUnread = !notification.readAt;
   const messagePreview = createSnippet(notification.messageSnapshot.text);
 
-  const notifiedDate = new Date(notification.notifiedAt);
-  const formattedDate = notifiedDate.toLocaleDateString("bg-BG", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const formattedDate = formatNotificationDateTime(notification.notifiedAt);
 
   const handleClick = () => {
     if (isUnread) {

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useIsMobile } from "@/lib/hooks/useMediaQuery";
-import { fetchWithAuth } from "@/lib/auth-fetch";
+import { fetchUnreadNotificationCount } from "@/lib/notification-history";
 import NotificationDropdown from "./NotificationDropdown";
 import UnreadIndicator from "./UnreadIndicator";
 
@@ -20,30 +20,27 @@ export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const bellRef = useRef<HTMLButtonElement>(null);
 
-  const fetchUnreadCount = useCallback(async () => {
-    if (!user) return;
+  const getUnreadCount = useCallback(async (): Promise<number | null> => {
+    if (!user) return null;
 
     try {
-      const response = await fetchWithAuth(user, "/api/notifications/unread-count");
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch unread count");
-      }
-
-      const data = await response.json();
-      setUnreadCount(data.count || 0);
+      return await fetchUnreadNotificationCount(user);
     } catch (error) {
       console.error("Error fetching unread count:", error);
+      return null;
     }
   }, [user]);
 
   useEffect(() => {
     if (!user) {
-      setUnreadCount(0);
       return;
     }
 
-    fetchUnreadCount();
+    void getUnreadCount().then((count) => {
+      if (typeof count === "number") {
+        setUnreadCount(count);
+      }
+    });
 
     // Listen for unread count changes from other parts of the app
     const handleCountChange = (event: CustomEvent<{ count: number }>) => {
@@ -56,8 +53,14 @@ export default function NotificationBell() {
     );
 
     // Poll for updates every 60 seconds
-    const interval = setInterval(fetchUnreadCount, UNREAD_COUNT_POLL_INTERVAL_MS);
-    
+    const interval = setInterval(() => {
+      void getUnreadCount().then((count) => {
+        if (typeof count === "number") {
+          setUnreadCount(count);
+        }
+      });
+    }, UNREAD_COUNT_POLL_INTERVAL_MS);
+
     return () => {
       clearInterval(interval);
       window.removeEventListener(
@@ -65,7 +68,7 @@ export default function NotificationBell() {
         handleCountChange as EventListener,
       );
     };
-  }, [user, fetchUnreadCount]);
+  }, [user, getUnreadCount]);
 
   const handleToggle = () => {
     // On mobile (screen width < 640px), navigate to notifications page instead of showing dropdown
@@ -95,7 +98,11 @@ export default function NotificationBell() {
         type="button"
         onClick={handleToggle}
         className="relative flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
-        aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications"}
+        aria-label={
+          unreadCount > 0
+            ? `Notifications (${unreadCount} unread)`
+            : "Notifications"
+        }
       >
         <Bell className="w-6 h-6 text-white" />
         {unreadCount > 0 && <UnreadIndicator />}

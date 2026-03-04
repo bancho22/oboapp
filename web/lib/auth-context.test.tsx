@@ -11,7 +11,7 @@ const DEFAULT_AUTH_USER = {
   uid: "anonymous-user-id",
   isAnonymous: true,
   getIdToken: vi.fn().mockResolvedValue("guest-token-proof"),
-} as User;
+} as unknown as User;
 
 // Mock Firebase Auth
 vi.mock("./firebase", () => ({
@@ -77,7 +77,7 @@ describe("AuthContext", () => {
         uid: "guest-token-failure-user",
         isAnonymous: true,
         getIdToken: vi.fn().mockRejectedValue(new Error("Token unavailable")),
-      } as User;
+      } as unknown as User;
 
       mockOnAuthStateChanged.mockImplementationOnce((auth, callback) => {
         callback(guestUserWithTokenFailure);
