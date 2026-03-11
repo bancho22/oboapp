@@ -1,0 +1,72 @@
+Feature: Heatmap API endpoint (GET /api/messages/heatmap)
+
+  As a consumer of the OboApp public API
+  I want to retrieve heatmap coordinate points for all finalized messages
+  So that I can render a geographic heatmap of historical data
+
+  # ─────────────────────────────────────────────
+  # Happy path
+  # ─────────────────────────────────────────────
+
+  Scenario: Returns a JSON array of coordinate points for finalized messages with GeoJSON
+    Given there are finalized messages with GeoJSON geometry in the database
+    When I send GET "/api/messages/heatmap"
+    Then the response status is 200
+    And the response body has a "points" array
+    And each item in "points" is an array of [latitude, longitude]
+
+  Scenario: City-wide messages are excluded from the response
+    Given there is a finalized message with "cityWide" set to true
+    When I send GET "/api/messages/heatmap"
+    Then the response body "points" array does not contain a centroid from that message
+
+  Scenario: Messages without GeoJSON are excluded from the response
+    Given there is a finalized message with no "geoJson" field
+    When I send GET "/api/messages/heatmap"
+    Then the response body "points" array does not contain a point for that message
+
+  Scenario: Non-finalized messages are excluded from the response
+    Given there is a message that has not been finalized (no "finalizedAt")
+    When I send GET "/api/messages/heatmap"
+    Then the response body "points" array does not contain a point for that message
+
+  Scenario: Each separate geometry feature contributes one centroid point
+    Given there is a finalized message whose GeoJSON has a LineString feature and a Point feature
+    When I send GET "/api/messages/heatmap"
+    Then the response body "points" array contains exactly 2 points (one centroid per feature)
+
+  Scenario: A Point feature contributes exactly one point
+    Given there is a finalized message whose GeoJSON has a single Point feature
+    When I send GET "/api/messages/heatmap"
+    Then the response body "points" array contains 1 point from that message
+
+  Scenario: A LineString feature contributes exactly one centroid point
+    Given there is a finalized message whose GeoJSON has a LineString with 4 vertices
+    When I send GET "/api/messages/heatmap"
+    Then the response body "points" array contains 1 centroid point from that LineString
+
+  Scenario: A Polygon feature contributes exactly one centroid point
+    Given there is a finalized message whose GeoJSON has a Polygon feature
+    When I send GET "/api/messages/heatmap"
+    Then the response body "points" array contains 1 centroid point from that Polygon
+
+  Scenario: A MultiPoint feature contributes one point per coordinate
+    Given there is a finalized message whose GeoJSON has a MultiPoint feature with 3 coordinates
+    When I send GET "/api/messages/heatmap"
+    Then the response body "points" array contains 3 points (one per coordinate)
+
+  Scenario: Returns an empty points array when there are no eligible messages
+    Given the database has no finalized messages with non-city-wide GeoJSON
+    When I send GET "/api/messages/heatmap"
+    Then the response status is 200
+    And the response body is '{"points":[],"messageCount":0,"oldestDate":null}'
+
+  # ─────────────────────────────────────────────
+  # Error handling
+  # ─────────────────────────────────────────────
+
+  Scenario: Returns 500 when the database is unavailable
+    Given the database is unavailable
+    When I send GET "/api/messages/heatmap"
+    Then the response status is 500
+    And the response body contains '{"error":"Failed to fetch heatmap data"}'

@@ -1,0 +1,45 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import HistoryMapWrapper from "./HistoryMapWrapper";
+import HistoryStats from "./HistoryStats";
+
+export const metadata: Metadata = {
+  title: "Исторически данни | OboApp",
+  description:
+    "Топлинна карта на исторически данни от всички събрани съобщения",
+};
+
+export default function HistoryPage() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Page header */}
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12">
+        <div className="mb-6">
+          <Link
+            href="/"
+            className="text-primary hover:text-primary-hover inline-flex items-center gap-2"
+          >
+            <span>←</span>
+            <span>Начало</span>
+          </Link>
+        </div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">
+          Исторически данни
+        </h1>
+        <p className="text-sm text-neutral">
+          Топлинна карта на всички финализирани съобщения. Показва кои
+          квартали се срещат по-често в данните на системата.
+          Може да бъде показател за това къде е нужно да извлечем повече данни
+          или за това къде районните администрации могат да
+          споделят повече информация.
+          <HistoryStats />
+        </p>
+      </div>
+
+      {/* Full-height map */}
+      <div className="flex-1">
+        <HistoryMapWrapper />
+      </div>
+    </div>
+  );
+}
