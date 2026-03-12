@@ -218,6 +218,59 @@ export function assertWithSpecificAddress(
   };
 }
 
+/**
+ * Asserts that filter-split output contains no links in plainText or markdownText.
+ * Checks bare URLs (https://..., http://...), www.-style domains, autolinks (<https://...>),
+ * Markdown inline links ([text](url)), and Markdown reference-style links ([text][id] / [id]: url).
+ */
+export function assertNoLinks(
+  output: string,
+  _context: AssertionValueFunctionContext,
+): GradingResult {
+  const parsed = parseOutput(output);
+  if (!parsed.success) return parsed.result;
+
+  const items = Array.isArray(parsed.data) ? parsed.data : [parsed.data];
+  const urlPattern =
+    /https?:\/\/[^\s)<>\]]+|www\.[^\s)<>\]]+|<https?:\/\/[^>\s]+>|\[[^\]]+\]\([^)]+\)|\[[^\]]+\]\s*\[[^\]]*\]|\[[^\]]+\]:\s*https?:\/\/\S+/im;
+
+  if (items.some((item) => typeof item !== "object" || item === null)) {
+    return {
+      pass: false,
+      score: 0,
+      reason:
+        "Output is malformed: expected an array of objects with plainText/markdownText fields",
+    };
+  }
+
+  const violations: string[] = [];
+  for (const item of items as Record<string, unknown>[]) {
+    for (const field of ["plainText", "markdownText"] as const) {
+      const value = item[field];
+      if (typeof value !== "string") {
+        return {
+          pass: false,
+          score: 0,
+          reason: `Output is malformed: expected ${field} to be a string on every item`,
+        };
+      }
+      const text = value;
+      if (urlPattern.test(text)) {
+        violations.push(`${field} contains a link`);
+      }
+    }
+  }
+
+  const pass = violations.length === 0;
+  return {
+    pass,
+    score: pass ? 1 : 0,
+    reason: pass
+      ? "No links found in plainText or markdownText"
+      : `Links found in output: ${violations.join("; ")}`,
+  };
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────
 
 function parseOutput(
