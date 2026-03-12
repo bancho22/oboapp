@@ -22,6 +22,7 @@ import { GtfsStopsRepository } from "./collections/gtfs-stops";
 import { EducationalFacilitiesRepository } from "./collections/educational-facilities";
 import { ApiClientsRepository } from "./collections/api-clients";
 import { UserPreferencesRepository } from "./collections/user-preferences";
+import { SensorCommunityReadingsRepository } from "./collections/sensor-community-readings";
 import { EventsRepository } from "./collections/events";
 import { EventMessagesRepository } from "./collections/event-messages";
 
@@ -47,6 +48,8 @@ export interface OboDb {
   apiClients: ApiClientsRepository;
   /** User preferences (notification filters, etc.) */
   userPreferences: UserPreferencesRepository;
+  /** Raw sensor.community PM readings */
+  sensorCommunityReadings: SensorCommunityReadingsRepository;
   /** Aggregated real-world events */
   events: EventsRepository;
   /** Message-to-event links */
@@ -81,6 +84,7 @@ function buildRepositories(client: DbClient): OboDb {
     educationalFacilities: new EducationalFacilitiesRepository(client),
     apiClients: new ApiClientsRepository(client),
     userPreferences: new UserPreferencesRepository(client),
+    sensorCommunityReadings: new SensorCommunityReadingsRepository(client),
     events: new EventsRepository(client),
     eventMessages: new EventMessagesRepository(client),
     close: () => client.close(),

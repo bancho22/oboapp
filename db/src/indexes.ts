@@ -114,6 +114,18 @@ export const INDEX_DEFINITIONS: IndexDefinition[] = [
     options: { name: "apiKey", unique: true },
   },
 
+  // --- sensorCommunityReadings ---
+  {
+    collection: "sensorCommunityReadings",
+    spec: { locality: 1, timestamp: -1 },
+    options: { name: "locality_timestamp" },
+  },
+  {
+    collection: "sensorCommunityReadings",
+    spec: { timestamp: 1 },
+    options: { name: "timestamp" },
+  },
+
   // --- events ---
   {
     collection: "events",
