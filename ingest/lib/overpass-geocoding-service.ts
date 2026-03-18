@@ -109,11 +109,12 @@ export function toOverpassRegex(normalizedName: string): string {
       .replaceAll(/([а-яa-z])-([а-яa-z])/gi, "$1( ?- ?)$2")
       // Allow optional ordinal suffix after numbers
       .replaceAll(/(\d+)/g, "$1(-(ти|ви|и|ри|ма|то))?")
-      // Expand single-letter abbreviations: "к. пейчинович" → "к[а-яa-z]*\.? пейчинович"
+      // Expand single-letter abbreviations: "к. пейчинович" → "к.*\.? пейчинович"
       // Only expands a single letter followed by ". " (not multi-letter abbreviations like "ген.")
       // Uses lookahead (?= ) so consecutive abbreviations like "г. с." both get expanded
       // Optional dot (\.?) allows matching both full and abbreviated OSM names (e.g. "Георги С. Раковски")
-      .replaceAll(/(^| )([а-яa-z])\.(?= )/gi, "$1$2[\u0430-\u044fa-z]*\\.?")
+      // Uses "." (any char) instead of [а-я] — Overpass POSIX regex doesn't support Cyrillic ranges
+      .replaceAll(/(^| )([а-яa-z])\.(?= )/gi, "$1$2.*\\.?")
   );
 }
 

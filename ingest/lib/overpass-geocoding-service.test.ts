@@ -256,8 +256,8 @@ describe("overpass-geocoding-service", () => {
 
     it("does not expand multi-letter abbreviations (ген. stays literal)", () => {
       const pattern = toOverpassRegex("ген. михаил скобелев");
-      // "ген." has 3 letters — must NOT be expanded to ген[а-яa-z]*
-      expect(pattern).not.toContain("ген[а-яa-z]*");
+      // "ген." has 3 letters — must NOT be expanded
+      expect(pattern).toBe("ген. михаил скобелев");
     });
   });
 });
