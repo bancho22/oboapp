@@ -39,9 +39,19 @@ export function generateEmbedding(
   text: string,
   context?: EmbeddingContext,
 ): Promise<number[] | null> {
-  if (!text.trim()) return Promise.resolve(null);
+  if (!text.trim()) {
+    logger.warn("Embedding skipped: empty text", {
+      messageId: context?.messageId,
+      source: context?.source,
+    });
+    return Promise.resolve(null);
+  }
 
   if (!process.env.GOOGLE_AI_API_KEY) {
+    logger.warn("Embedding skipped: GOOGLE_AI_API_KEY not set", {
+      messageId: context?.messageId,
+      source: context?.source,
+    });
     return Promise.resolve(null);
   }
 

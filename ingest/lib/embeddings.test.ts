@@ -54,9 +54,13 @@ describe("generateEmbedding", () => {
   });
 
   it("returns null for empty text", async () => {
-    const result = await generateEmbedding("   ");
+    const result = await generateEmbedding("   ", { messageId: "msg-1", source: "test" });
     expect(result).toBeNull();
     expect(mockEmbedContent).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith(
+      "Embedding skipped: empty text",
+      expect.objectContaining({ messageId: "msg-1", source: "test" }),
+    );
   });
 
   it("returns null on API error", async () => {
@@ -117,9 +121,13 @@ describe("generateEmbedding", () => {
 
   it("returns null when GOOGLE_AI_API_KEY is not set", async () => {
     delete process.env.GOOGLE_AI_API_KEY;
-    const result = await generateEmbedding("test text");
+    const result = await generateEmbedding("test text", { messageId: "msg-2", source: "test" });
     expect(result).toBeNull();
     expect(mockEmbedContent).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith(
+      "Embedding skipped: GOOGLE_AI_API_KEY not set",
+      expect.objectContaining({ messageId: "msg-2", source: "test" }),
+    );
   });
 
   it("serializes concurrent calls so only one is in-flight at a time", async () => {
