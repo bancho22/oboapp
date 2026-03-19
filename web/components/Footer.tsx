@@ -55,6 +55,14 @@ export default function Footer({ className = "" }: FooterProps) {
                 Нечетими съобщения
               </Link>
             </div>
+            <div>
+              <Link
+                href="/events"
+                className="text-link hover:text-link-hover hover:underline"
+              >
+                Групирани съобщения
+              </Link>
+            </div>
           </div>
         </div>
 
