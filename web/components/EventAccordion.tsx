@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useId } from "react";
-import Image from "next/image";
 import { ChevronDown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Event, Message, EventMessage } from "@oboapp/shared";
 import sources from "@/lib/sources.json";
 import { stripMarkdown } from "@/lib/markdown-utils";
+import { createSnippet } from "@/lib/text-utils";
+import { formatTimespan } from "@/lib/date-format";
 import CategoryChips from "@/components/CategoryChips";
+import SourceLogo from "@/components/SourceLogo";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
 interface EventAccordionProps {
@@ -19,54 +21,9 @@ type EventMessagesResponse = {
   eventMessages: EventMessage[];
 };
 
-function formatDate(dateStr: string | undefined): string {
-  if (!dateStr) return "";
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return "";
-  const day = date.getDate().toString().padStart(2, "0");
-  const month = (date.getMonth() + 1).toString().padStart(2, "0");
-  const year = date.getFullYear();
-  return `${day}.${month}.${year}`;
-}
-
-function formatTimespan(
-  start: string | undefined,
-  end: string | undefined,
-): string {
-  const startStr = formatDate(start);
-  const endStr = formatDate(end);
-  if (startStr && endStr && startStr !== endStr) return `${startStr} – ${endStr}`;
-  if (startStr) return startStr;
-  if (endStr) return endStr;
-  return "";
-}
-
-function createSnippet(text: string, maxLength = 150): string {
+function makeSnippet(text: string, maxLength = 150): string {
   const clean = stripMarkdown(text);
-  if (clean.length <= maxLength) return clean;
-  const truncated = clean.substring(0, maxLength);
-  const lastSpace = truncated.lastIndexOf(" ");
-  if (lastSpace > 120) return truncated.substring(0, lastSpace) + "...";
-  return truncated + "...";
-}
-
-function SourceLogo({ sourceId }: { readonly sourceId: string }) {
-  const [error, setError] = useState(false);
-  const logoPath = `/sources/${sourceId}.png`;
-  const sourceInfo = sources.find((s) => s.id === sourceId);
-
-  if (error) return null;
-
-  return (
-    <Image
-      src={logoPath}
-      alt={sourceInfo?.name || sourceId}
-      width={20}
-      height={20}
-      className="w-5 h-5 object-contain flex-shrink-0"
-      onError={() => setError(true)}
-    />
-  );
+  return createSnippet(clean, maxLength);
 }
 
 function formatConfidence(confidence: number): string {
@@ -82,7 +39,7 @@ function MessageRow({
 }) {
   const sourceInfo = sources.find((s) => s.id === message.source);
   const displayText = message.markdownText || message.text;
-  const snippet = createSnippet(displayText, 120);
+  const snippet = makeSnippet(displayText, 120);
 
   return (
     <div className="flex items-start gap-3 py-2 px-3 border-b border-neutral-border last:border-b-0">
@@ -166,7 +123,7 @@ export default function EventAccordion({ event }: EventAccordionProps) {
   const contentId = useId();
   const titleId = useId();
 
-  const snippet = createSnippet(event.plainText, 200);
+  const snippet = makeSnippet(event.plainText, 200);
   const timespan = formatTimespan(event.timespanStart, event.timespanEnd);
 
   return (

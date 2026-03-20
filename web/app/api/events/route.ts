@@ -5,18 +5,11 @@ import {
   toRequiredISOString,
   toOptionalISOString,
 } from "@/lib/date-serialization";
+import { getLocality } from "@/lib/bounds-utils";
 import type { Event } from "@oboapp/shared";
 
 const PAGE_SIZE = 20;
 const DEFAULT_RELEVANCE_DAYS = 3;
-
-function getLocality(): string {
-  const locality = process.env.NEXT_PUBLIC_LOCALITY;
-  if (!locality) {
-    throw new Error("NEXT_PUBLIC_LOCALITY environment variable is required");
-  }
-  return locality;
-}
 
 function getCutoffDate(): Date {
   const cutoff = new Date();
@@ -56,12 +49,11 @@ export async function GET(request: Request) {
     const cursorUpdatedAt = searchParams.get("cursorUpdatedAt");
     const cursorId = searchParams.get("cursorId");
 
-    if (
-      (cursorUpdatedAt && !cursorId) ||
-      (!cursorUpdatedAt && cursorId)
-    ) {
+    if ((cursorUpdatedAt && !cursorId) || (!cursorUpdatedAt && cursorId)) {
       return NextResponse.json(
-        { error: "Both cursorUpdatedAt and cursorId must be provided together" },
+        {
+          error: "Both cursorUpdatedAt and cursorId must be provided together",
+        },
         { status: 400 },
       );
     }

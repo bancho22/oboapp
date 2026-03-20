@@ -3,13 +3,14 @@
 import { useMemo } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import Image from "next/image";
-import { useState } from "react";
 import type { Event } from "@oboapp/shared";
 import sources from "@/lib/sources.json";
 import { stripMarkdown } from "@/lib/markdown-utils";
 import { getButtonClasses } from "@/lib/theme";
+import { formatTimespan } from "@/lib/date-format";
+import { createSnippet } from "@/lib/text-utils";
 import CategoryChips from "@/components/CategoryChips";
+import SourceLogo from "@/components/SourceLogo";
 import EventAccordion from "@/components/EventAccordion";
 
 type EventsCursor = {
@@ -40,60 +41,10 @@ const fetchEvents = async ({
   return response.json();
 };
 
-function formatDate(dateStr: string | undefined): string {
-  if (!dateStr) return "";
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return "";
-  const day = date.getDate().toString().padStart(2, "0");
-  const month = (date.getMonth() + 1).toString().padStart(2, "0");
-  const year = date.getFullYear();
-  return `${day}.${month}.${year}`;
-}
-
-function formatTimespan(
-  start: string | undefined,
-  end: string | undefined,
-): string {
-  const startStr = formatDate(start);
-  const endStr = formatDate(end);
-  if (startStr && endStr && startStr !== endStr) return `${startStr} – ${endStr}`;
-  if (startStr) return startStr;
-  if (endStr) return endStr;
-  return "";
-}
-
-function SourceLogo({ sourceId }: { readonly sourceId: string }) {
-  const [error, setError] = useState(false);
-  const sourceInfo = sources.find((s) => s.id === sourceId);
-  const logoPath = `/sources/${sourceId}.png`;
-
-  if (error) {
-    return (
-      <span className="text-xs text-neutral truncate">
-        {sourceInfo?.name || sourceId}
-      </span>
-    );
-  }
-
-  return (
-    <Image
-      src={logoPath}
-      alt={sourceInfo?.name || sourceId}
-      width={24}
-      height={24}
-      className="w-6 h-6 object-contain flex-shrink-0"
-      onError={() => setError(true)}
-    />
-  );
-}
-
 function SingleEventCard({ event }: { readonly event: Event }) {
   const displayText = event.markdownText || event.plainText;
   const clean = stripMarkdown(displayText);
-  const snippet =
-    clean.length > 150
-      ? clean.substring(0, clean.lastIndexOf(" ", 150) > 120 ? clean.lastIndexOf(" ", 150) : 150) + "..."
-      : clean;
+  const snippet = createSnippet(clean, 150);
   const timespan = formatTimespan(event.timespanStart, event.timespanEnd);
 
   return (
@@ -102,7 +53,11 @@ function SingleEventCard({ event }: { readonly event: Event }) {
         {/* Source */}
         <div className="flex items-center gap-2">
           {event.sources.length > 0 && (
-            <SourceLogo sourceId={event.sources[0]} />
+            <SourceLogo
+              sourceId={event.sources[0]}
+              size={24}
+              showFallbackText
+            />
           )}
           <span className="text-sm font-semibold text-foreground truncate">
             {sources.find((s) => s.id === event.sources[0])?.name ||
@@ -190,9 +145,10 @@ export default function EventsPage() {
               Групирани съобщения
             </h1>
             <p className="text-sm text-neutral">
-              Съобщенията са групирани по реални събития. Всяко събитие обединява
-              свързани съобщения от различни източници. Разгъни събитие, за да
-              видиш включените съобщения и тяхната увереност на съвпадение.
+              Съобщенията са групирани по реални събития. Всяко събитие
+              обединява свързани съобщения от различни източници. Разгъни
+              събитие, за да видиш включените съобщения и тяхната увереност на
+              съвпадение.
             </p>
           </div>
         </div>
