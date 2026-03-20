@@ -284,12 +284,12 @@ After finalization, messages are matched to Events (real-world incidents) via `i
 
 **Prompt Evaluation (promptfoo):**
 
-All four prompts have eval configs in `ingest/evals/` using [promptfoo](https://www.promptfoo.dev/). Run before merging prompt or schema changes:
+All four prompts have eval configs in `ingest/prompts/__evals__/` using [promptfoo](https://www.promptfoo.dev/). Run before merging prompt or schema changes:
 
 - `pnpm promptfoo` — evaluates all 4 prompts against source fixtures with schema + behavioral assertions
 - `pnpm promptfoo:redteam` — runs adversarial inputs (prompt injection, data exfiltration, off-topic steering)
 - `pnpm promptfoo:view` — opens the web dashboard to inspect results
-- Custom assertions in `ingest/evals/assertions.ts` reuse the same Zod schemas as production
+- Custom assertions in `ingest/prompts/__evals__/assertions.ts` reuse the same Zod schemas as production
 
 ### Crawler Development
 
@@ -345,7 +345,7 @@ All four prompts have eval configs in `ingest/evals/` using [promptfoo](https://
 - **ALWAYS link to related content** instead of repeating text
 - **ALWAYS aim for short, readable documentation** (prefer 50-100 lines over 200+)
 - Link to existing sections rather than copy/paste content
-- Example: Reference `docs/features/geocoding-overview.md` rather than duplicating service descriptions
+- Example: Reference `ingest/geocoding/README.md` rather than duplicating service descriptions
 - Maintain single source of truth for each topic
 
 **When to Document**:
