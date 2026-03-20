@@ -30,6 +30,17 @@ Each crawler:
 3. Stores documents in Firestore with `sourceType` identifier
 4. Tracks processed URLs to avoid duplicates
 
+## Screenshot Baselines (Required)
+
+Every crawler directory should include baseline screenshots for easier maintenance when source site design changes.
+
+- Preferred files: `_entry.png` (listing/index page) and `_message.png` (detail page)
+- Place screenshots directly in `ingest/crawlers/{source-name}/`
+- Source-specific names are allowed when structure differs
+- Refresh screenshots whenever selectors/parsers are updated after site redesign
+
+Tip: full-page capture tools such as GoFullPage can speed up baseline creation.
+
 ### Crawler Architecture
 
 WordPress-style crawlers (rayon-oborishte-bg, sredec-sofia-org, sofia-bg, mladost-bg, studentski-bg, so-slatina-org, lozenets-sofia-bg, raioniskar-bg, rayon-pancharevo-bg, rayon-ilinden-bg, triaditsa-org, krasna-polyana-org) use shared utilities from `shared/webpage-crawlers.ts`:
