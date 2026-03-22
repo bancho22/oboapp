@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import sources from "@/lib/sources.json";
+import sources from "@/lib/sources";
 
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL || "https://oboapp.online";
 
-  const typedSources: Array<{ id: string; name: string; url: string }> =
-    sources;
-  const response = typedSources.map((source) => ({
-    ...source,
+  const response = sources.map((source) => ({
+    id: source.id,
+    name: source.name,
+    url: source.url,
     logoUrl: `${baseUrl}/sources/${source.id}.png`,
   }));
 

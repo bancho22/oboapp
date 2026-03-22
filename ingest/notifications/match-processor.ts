@@ -2,7 +2,7 @@ import type { OboDb } from "@oboapp/db";
 import type { Message, Interest, NotificationMatch } from "@/lib/types";
 import { matchMessageToInterest } from "./geo-matcher";
 import { logger } from "@/lib/logger";
-import { UNCATEGORIZED } from "@oboapp/shared";
+import { UNCATEGORIZED, isExperimentalSource } from "@oboapp/shared";
 import {
   getString,
   getBoolean,
@@ -22,12 +22,16 @@ export interface UserNotificationFilters {
   notificationCategories: Set<string>;
   /** Sources to include (empty = allow all) */
   notificationSources: Set<string>;
+  /** Whether the user has opted into experimental features */
+  experimentalFeatures: boolean;
 }
 
 /**
  * Determine whether a message passes a user's notification filters.
  *
  * Rules:
+ * - Messages from experimental sources require experimentalFeatures opt-in
+ *   (blocked even when filters are undefined, i.e. no preferences document)
  * - Empty filter array for a dimension = no restriction (allow all)
  * - Non-empty categories: message must have at least one matching category,
  *   OR "uncategorized" is selected and message has no categories
@@ -38,6 +42,14 @@ export function shouldNotifyUser(
   filters: UserNotificationFilters | undefined,
   message: Pick<Message, "categories" | "source">,
 ): boolean {
+  // Experimental sources are opt-in: block unless user explicitly enabled them.
+  // This intentionally applies even when filters is undefined (no preferences doc).
+  if (message.source && isExperimentalSource(message.source)) {
+    if (!filters?.experimentalFeatures) {
+      return false;
+    }
+  }
+
   // No preferences doc → no filtering → allow all
   if (!filters) return true;
 

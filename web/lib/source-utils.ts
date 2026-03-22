@@ -1,11 +1,7 @@
-import sources from "@/lib/sources.json";
+import sources from "@/lib/sources";
 
-export interface Source {
-  id: string;
-  url: string;
-  name: string;
-  localities: string[];
-}
+/** Mutable source type derived from the web-facing sources module (avoids readonly field incompatibilities). */
+export type Source = (typeof sources)[number];
 
 /**
  * Get sources applicable to a specific locality
@@ -13,10 +9,9 @@ export interface Source {
  * @returns Array of sources that serve this locality
  */
 export function getSourcesForLocality(locality: string): Source[] {
-  const filtered: Source[] = sources.filter((source) =>
+  return sources.filter((source) =>
     source.localities.includes(locality),
   );
-  return filtered;
 }
 
 /**
@@ -32,4 +27,12 @@ export function getCurrentLocalitySources(): Source[] {
     );
   }
   return getSourcesForLocality(locality);
+}
+
+/**
+ * Get experimental sources for the current locality.
+ * Returns sources whose `experimental` flag is true.
+ */
+export function getExperimentalSources(): Source[] {
+  return getCurrentLocalitySources().filter((s) => s.experimental);
 }

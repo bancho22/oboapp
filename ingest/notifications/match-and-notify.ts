@@ -201,11 +201,15 @@ export async function main(): Promise<void> {
     const srcs = Array.isArray(rawSrcs)
       ? rawSrcs.filter((v): v is string => typeof v === "string")
       : [];
-    // Only add to map if user actually has active filters
-    if (cats.length > 0 || srcs.length > 0) {
+    const experimentalFeatures = prefs.experimentalFeatures === true;
+    // Include in map if user has active filters OR opted into experimental features.
+    // Users with only experimentalFeatures enabled need a map entry so that
+    // shouldNotifyUser() sees their opt-in (otherwise undefined → blocked).
+    if (cats.length > 0 || srcs.length > 0 || experimentalFeatures) {
       userFiltersMap.set(userId, {
         notificationCategories: new Set(cats),
         notificationSources: new Set(srcs),
+        experimentalFeatures,
       });
     }
   }

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useNotificationFilters } from "@/lib/hooks/useNotificationFilters";
-import { getCurrentLocalitySources } from "@/lib/source-utils";
+import { getCurrentLocalitySources, getExperimentalSources } from "@/lib/source-utils";
 import CategoryFilterItem from "@/components/CategoryFilterItem";
 import SourceFilterItem from "@/components/SourceFilterItem";
 import FilterSection from "@/components/FilterSection";
@@ -18,6 +18,7 @@ import { borderRadius } from "@/lib/colors";
 import { Info } from "lucide-react";
 import BackButton from "@/components/BackButton";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import ExperimentalFeaturesSection from "../ExperimentalFeaturesSection";
 import { useEffect, useMemo } from "react";
 
 export default function NotificationFiltersPage() {
@@ -27,6 +28,8 @@ export default function NotificationFiltersPage() {
   const {
     selectedCategories,
     selectedSources,
+    experimentalFeatures,
+    setExperimentalFeatures,
     isLoading,
     isSaving,
     error,
@@ -45,6 +48,14 @@ export default function NotificationFiltersPage() {
   const sources = useMemo(() => {
     try {
       return getCurrentLocalitySources();
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const experimentalSources = useMemo(() => {
+    try {
+      return getExperimentalSources();
     } catch {
       return [];
     }
@@ -176,6 +187,15 @@ export default function NotificationFiltersPage() {
               </FilterSection>
             </div>
 
+            {/* Experimental features section */}
+            <div className="bg-white rounded-lg shadow mb-6">
+              <ExperimentalFeaturesSection
+                enabled={experimentalFeatures}
+                onToggle={setExperimentalFeatures}
+                experimentalSources={experimentalSources}
+              />
+            </div>
+
             {/* Actions */}
             <div className="flex flex-wrap items-center gap-3">
               <button
@@ -199,7 +219,9 @@ export default function NotificationFiltersPage() {
                 onClick={clearAll}
                 disabled={
                   isSaving ||
-                  (selectedCategories.size === 0 && selectedSources.size === 0)
+                  (selectedCategories.size === 0 &&
+                    selectedSources.size === 0 &&
+                    !experimentalFeatures)
                 }
                 className={`${buttonStyles.secondary} ${buttonSizes.md} ${borderRadius.sm} ml-auto`}
               >

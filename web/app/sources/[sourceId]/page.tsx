@@ -10,10 +10,10 @@ import {
 import { useMessageByIdFallback } from "@/lib/hooks/useMessageByIdFallback";
 import Link from "next/link";
 import Image from "next/image";
-import { Message, SourceConfig } from "@/lib/types";
+import { Message } from "@/lib/types";
 import MessagesGrid from "@/components/MessagesGrid";
 import MessageDetailView from "@/components/MessageDetailView/MessageDetailView";
-import sourcesData from "@/lib/sources.json";
+import sourcesData from "@/lib/sources";
 import { extractHostname } from "@/lib/url-utils";
 import { navigateBackOrReplace } from "@/lib/navigation-utils";
 
@@ -23,11 +23,11 @@ export default function SourcePage() {
   const searchParams = useSearchParams();
   const sourceId = typeof params.sourceId === "string" ? params.sourceId : "";
 
-  // Find source in sources.json
-  const source = useMemo(() => {
-    const allSources: SourceConfig[] = sourcesData;
-    return allSources.find((s) => s.id === sourceId);
-  }, [sourceId]);
+  // Find source in source definitions
+  const source = useMemo(
+    () => sourcesData.find((s) => s.id === sourceId),
+    [sourceId],
+  );
 
   // Validate source exists - redirect to 404 if not
   useEffect(() => {
