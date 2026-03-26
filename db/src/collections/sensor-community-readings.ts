@@ -31,7 +31,8 @@ export class SensorCommunityReadingsRepository {
 
   /**
    * Create a reading with a specific deterministic ID.
-   * Uses atomic create — fails silently if the ID already exists (dedup).
+   * Uses atomic create — will throw if the ID already exists (dedup), and
+   * callers are expected to handle duplicate-ID errors as appropriate.
    */
   async createOne(
     id: string,
