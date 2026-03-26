@@ -260,7 +260,7 @@ export async function crawl(): Promise<void> {
       alertType,
     };
 
-    const url = buildAlertUrl(locality, cellId);
+    const url = buildAlertUrl(locality, cellId, now.getTime());
     const { text, markdownText } = buildAlertText(evaluation);
 
     const doc: SourceDocumentWithGeoJson = {
