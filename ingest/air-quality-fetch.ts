@@ -37,7 +37,7 @@ async function main() {
     );
   }
 
-  const apiData = (await response.json()) as unknown[];
+  const apiData: unknown[] = await response.json();
   logger.info(`[air-quality-fetch] Received ${apiData.length} raw entries`);
 
   const readings = parseSensorResponse(apiData, locality);
@@ -64,9 +64,18 @@ async function main() {
         locality,
       });
       stored++;
-    } catch {
-      // createOne fails if ID already exists — expected dedup behavior
-      skipped++;
+    } catch (err) {
+      // Mongo adapter normalizes to "already-exists"; Firestore throws gRPC code 6
+      if (
+        err != null &&
+        typeof err === "object" &&
+        "code" in err &&
+        (err.code === "already-exists" || err.code === 6)
+      ) {
+        skipped++;
+      } else {
+        throw err;
+      }
     }
   }
 

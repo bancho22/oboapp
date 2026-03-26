@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { parseSensorResponse } from "./parse-sensor-response";
 
 function makeSensorEntry(overrides: Record<string, unknown> = {}) {
+  const { location: locationOverrides, ...rest } = overrides;
   return {
     id: 1,
     sensor: {
@@ -13,15 +14,14 @@ function makeSensorEntry(overrides: Record<string, unknown> = {}) {
       latitude: "42.700",
       longitude: "23.350",
       indoor: 0,
-      ...((overrides.location as Record<string, unknown>) ?? {}),
+      ...((locationOverrides as Record<string, unknown>) ?? {}),
     },
     timestamp: "2024-01-01T12:00:00",
     sensordatavalues: [
       { value_type: "P1", value: "30.5" },
       { value_type: "P2", value: "15.3" },
     ],
-    ...overrides,
-    // Re-apply location since overrides may have been spread before it
+    ...rest,
   };
 }
 

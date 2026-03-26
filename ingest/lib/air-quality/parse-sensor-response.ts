@@ -45,6 +45,10 @@ interface ApiSensorEntry {
   sensordatavalues: SensorDataValue[];
 }
 
+function isApiEntry(val: unknown): val is ApiSensorEntry {
+  return val != null && typeof val === "object";
+}
+
 /**
  * Parse sensor.community API response into validated readings.
  *
@@ -59,14 +63,15 @@ export function parseSensorResponse(
   const results: ParsedReading[] = [];
 
   for (const raw of apiData) {
-    const entry = raw as ApiSensorEntry;
+    if (!isApiEntry(raw)) continue;
+    const entry = raw;
 
     // Skip indoor sensors
     if (entry.location?.indoor === 1) continue;
 
     // Validate coordinates
-    const lat = parseFloat(entry.location?.latitude as string);
-    const lng = parseFloat(entry.location?.longitude as string);
+    const lat = parseFloat(String(entry.location?.latitude ?? ""));
+    const lng = parseFloat(String(entry.location?.longitude ?? ""));
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
 
     // Bounds check
@@ -76,7 +81,9 @@ export function parseSensorResponse(
     let pm10 = NaN;
     let pm25 = NaN;
 
-    for (const sdv of entry.sensordatavalues ?? []) {
+    if (!Array.isArray(entry.sensordatavalues)) continue;
+
+    for (const sdv of entry.sensordatavalues) {
       const value = parseFloat(sdv.value);
       if (!Number.isFinite(value) || value < 0) continue;
 
@@ -97,7 +104,9 @@ export function parseSensorResponse(
       ? Math.floor(pm25 * 10) / 10
       : 0;
 
-    const timestamp = new Date(entry.timestamp);
+    // sensor.community timestamps omit timezone — treat as UTC for deterministic parsing
+    const ts = entry.timestamp;
+    const timestamp = new Date(ts.endsWith("Z") ? ts : ts + "Z");
     if (Number.isNaN(timestamp.getTime())) continue;
 
     results.push({
