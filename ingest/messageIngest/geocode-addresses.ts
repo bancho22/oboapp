@@ -3,6 +3,7 @@ import {
   geocodeIntersectionsForStreets,
   geocodeCadastralPropertiesFromIdentifiers,
   geocodeBusStops,
+  geocodeEducationalFacilities,
 } from "@/geocoding/router";
 import { overpassGeocodeAddresses } from "@/geocoding/overpass/service";
 import {
@@ -12,6 +13,7 @@ import {
   Coordinates,
 } from "@/lib/types";
 import type { CadastralGeometry } from "@/geocoding/cadastre/service";
+import type { IngestErrorRecorder } from "@/lib/ingest-errors";
 import { logger } from "@/lib/logger";
 import { isWithinBounds } from "@oboapp/shared";
 import { getLocality } from "@/lib/target-locality";
@@ -396,12 +398,40 @@ async function geocodeBusStopsFromExtractedData(
 }
 
 /**
+ * Helper: Geocode educational facilities (schools and kindergartens) using local reference data
+ */
+async function geocodeEducationalFacilitiesFromExtractedData(
+  extractedData: ExtractedLocations,
+  preGeocodedMap: Map<string, Coordinates>,
+  addresses: Address[],
+  ingestErrors?: IngestErrorRecorder,
+): Promise<void> {
+  if (
+    !extractedData.educationalFacilities ||
+    extractedData.educationalFacilities.length === 0
+  ) {
+    return;
+  }
+
+  const geocoded = await geocodeEducationalFacilities(
+    extractedData.educationalFacilities,
+    ingestErrors,
+  );
+  addresses.push(...geocoded);
+
+  geocoded.forEach((addr) => {
+    preGeocodedMap.set(addr.originalText, addr.coordinates);
+  });
+}
+
+/**
  * Geocode addresses from extracted locations using hybrid approach.
  * Google for pins, Overpass for street intersections, Cadastre for УПИ, GTFS for bus stops.
  * Skips geocoding for geotagged coordinates (pre-resolved by source).
  */
 export async function geocodeAddressesFromExtractedData(
   extractedData: ExtractedLocations | null,
+  ingestErrors?: IngestErrorRecorder,
 ): Promise<GeocodingResult> {
   const preGeocodedMap = new Map<string, Coordinates>();
   const addresses: Address[] = [];
@@ -418,6 +448,12 @@ export async function geocodeAddressesFromExtractedData(
     extractedData,
     preGeocodedMap,
     addresses,
+  );
+  await geocodeEducationalFacilitiesFromExtractedData(
+    extractedData,
+    preGeocodedMap,
+    addresses,
+    ingestErrors,
   );
 
   // Deduplicate addresses before returning

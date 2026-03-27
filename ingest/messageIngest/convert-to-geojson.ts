@@ -12,12 +12,14 @@ import {
   getIngestErrorRecorder,
   type IngestErrorRecorder,
 } from "@/lib/ingest-errors";
+import { EDUCATIONAL_FACILITY_PREFIX } from "@/lib/constants";
 
 /**
- * Helper: Validate that all addresses have been geocoded
+ * Helper: Validate that all pin addresses and street endpoints have been geocoded
+ * (does not validate bus stops, educational facilities, or cadastral properties)
  * Exported for unit testing
  */
-export function validateAllAddressesGeocoded(
+export function validatePinsAndStreetsGeocoded(
   extractedData: ExtractedLocations,
   preGeocodedMap: Map<string, Coordinates>,
 ): string[] {
@@ -51,6 +53,7 @@ export async function convertMessageGeocodingToGeoJson(
   cadastralGeometries?: Map<string, CadastralGeometry>,
   geocodedBusStops?: Address[],
   ingestErrors?: IngestErrorRecorder,
+  geocodedEducationalFacilities?: Address[],
 ): Promise<GeoJSONFeatureCollection | null> {
   const recorder = getIngestErrorRecorder(ingestErrors);
   if (!extractedData) {
@@ -58,7 +61,7 @@ export async function convertMessageGeocodingToGeoJson(
   }
 
   // Validate that all required addresses have been geocoded
-  const missingAddresses = validateAllAddressesGeocoded(
+  const missingAddresses = validatePinsAndStreetsGeocoded(
     extractedData,
     preGeocodedMap,
   );
@@ -73,28 +76,87 @@ export async function convertMessageGeocodingToGeoJson(
     ),
   };
 
+  // Track missing bus stops
+  const missingBusStops: string[] = [];
+  if (extractedData.busStops && extractedData.busStops.length > 0) {
+    const geocodedStopCodes = new Set(
+      (geocodedBusStops ?? []).map((stop) =>
+        stop.originalText.replace("Спирка ", ""),
+      ),
+    );
+    for (const stopCode of extractedData.busStops) {
+      if (!geocodedStopCodes.has(stopCode)) {
+        missingBusStops.push(`Спирка ${stopCode}`);
+      }
+    }
+  }
+
+  // Track missing educational facilities
+  const missingFacilities: string[] = [];
+  if (
+    extractedData.educationalFacilities &&
+    extractedData.educationalFacilities.length > 0
+  ) {
+    const geocodedFacilityKeys = new Set(
+      (geocodedEducationalFacilities ?? []).map((f) =>
+        f.originalText.replace(EDUCATIONAL_FACILITY_PREFIX, ""),
+      ),
+    );
+    for (const facility of extractedData.educationalFacilities) {
+      const key = `${facility.type}:${facility.number}`;
+      if (!geocodedFacilityKeys.has(key)) {
+        missingFacilities.push(
+          `${EDUCATIONAL_FACILITY_PREFIX}${facility.type}:${facility.number}`,
+        );
+      }
+    }
+  }
+
+  // Track missing cadastral properties
+  const missingCadastral: string[] = [];
+  if (extractedData.cadastralProperties && extractedData.cadastralProperties.length > 0) {
+    for (const prop of extractedData.cadastralProperties) {
+      if (!cadastralGeometries || !cadastralGeometries.has(prop.identifier)) {
+        missingCadastral.push(`УПИ ${prop.identifier}`);
+      }
+    }
+  }
+
+  const allMissing = [
+    ...missingAddresses,
+    ...missingBusStops,
+    ...missingFacilities,
+    ...missingCadastral,
+  ];
+
   // Check if we have ANY features to display
   const hasFeatures =
     filteredData.pins.length > 0 ||
     filteredData.streets.length > 0 ||
     (cadastralGeometries && cadastralGeometries.size > 0) ||
-    (geocodedBusStops && geocodedBusStops.length > 0);
+    (geocodedBusStops && geocodedBusStops.length > 0) ||
+    (geocodedEducationalFacilities && geocodedEducationalFacilities.length > 0);
 
   if (!hasFeatures) {
-    recorder.error(
-      `❌ No geocoded features available (all ${missingAddresses.length} addresses failed)`,
-    );
-    throw new Error(
-      `Failed to geocode all addresses: ${missingAddresses.join(", ")}`,
-    );
+    const detail =
+      allMissing.length > 0
+        ? `Failed to geocode all locations: ${allMissing.join(", ")}`
+        : "No geocodable locations found in extracted data";
+    recorder.error(`❌ ${detail}`);
+    throw new Error(detail);
   }
 
   // Log partial failures as warnings
-  if (missingAddresses.length > 0) {
+  if (allMissing.length > 0) {
+    const shownParts = [
+      filteredData.pins.length > 0 && `${filteredData.pins.length} pins`,
+      filteredData.streets.length > 0 && `${filteredData.streets.length} streets`,
+      geocodedBusStops && geocodedBusStops.length > 0 && `${geocodedBusStops.length} bus stops`,
+      geocodedEducationalFacilities && geocodedEducationalFacilities.length > 0 && `${geocodedEducationalFacilities.length} facilities`,
+      cadastralGeometries && cadastralGeometries.size > 0 && `${cadastralGeometries.size} cadastral`,
+    ].filter(Boolean).join(" + ");
     recorder.warn(
-      `⚠️  Partial geocoding: ${missingAddresses.length} addresses failed (showing ${filteredData.pins.length} pins + ${filteredData.streets.length} streets): ${missingAddresses.join(
-        ", ",
-      )}`,
+      `⚠️  Partial geocoding: ${allMissing.length} locations failed (showing ${shownParts}): ${allMissing.join(", ")}`,
     );
   }
 
@@ -170,6 +232,49 @@ export async function convertMessageGeocodingToGeoJson(
       return {
         type: "FeatureCollection",
         features: busStopFeatures,
+      };
+    }
+  }
+
+  // Add educational facility features
+  if (geocodedEducationalFacilities && geocodedEducationalFacilities.length > 0) {
+    const facilityFeatures: GeoJSONFeature[] = geocodedEducationalFacilities.map(
+      (facility) => {
+        // originalText format: "Учебно заведение {type}:{number}"
+        const typeAndNumber = facility.originalText.replace(
+          EDUCATIONAL_FACILITY_PREFIX,
+          "",
+        );
+        const colonIdx = typeAndNumber.indexOf(":");
+        const facilityType =
+          colonIdx !== -1 ? typeAndNumber.slice(0, colonIdx) : "";
+        const facilityNumber =
+          colonIdx !== -1 ? typeAndNumber.slice(colonIdx + 1) : typeAndNumber;
+
+        return {
+          type: "Feature",
+          geometry: {
+            type: "Point",
+            coordinates: [facility.coordinates.lng, facility.coordinates.lat],
+          },
+          properties: {
+            feature_type: "educational_facility",
+            locationType: "educational_facility",
+            facility_type: facilityType,
+            facility_number: facilityNumber,
+            facility_name: facility.formattedAddress,
+          },
+        };
+      },
+    );
+
+    if (geoJson) {
+      geoJson.features.push(...facilityFeatures);
+    } else {
+      // Only educational facility features
+      return {
+        type: "FeatureCollection",
+        features: facilityFeatures,
       };
     }
   }

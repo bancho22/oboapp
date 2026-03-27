@@ -35,6 +35,7 @@ export { filterOutlierCoordinates } from "./filter-outliers";
 export { verifyAuthToken, validateMessageText } from "./helpers";
 import { buildMessageResponse } from "./build-response";
 export { buildMessageResponse };
+import { EDUCATIONAL_FACILITY_PREFIX } from "@/lib/constants";
 
 export interface MessageIngestOptions {
   /**
@@ -556,6 +557,7 @@ function createLocationExtractionAudit(
       streetsCount: extractedLocations.streets?.length || 0,
       cadastralCount: extractedLocations.cadastralProperties?.length || 0,
       busStopsCount: extractedLocations.busStops?.length || 0,
+      educationalFacilitiesCount: extractedLocations.educationalFacilities?.length || 0,
       cityWide: extractedLocations.cityWide || false,
     },
   };
@@ -613,6 +615,7 @@ async function storeExtractedLocations(
   const streets = extractedLocations?.streets || [];
   const cadastralProperties = extractedLocations?.cadastralProperties || [];
   const busStops = extractedLocations?.busStops || [];
+  const educationalFacilities = extractedLocations?.educationalFacilities || [];
   const cityWide = extractedLocations?.cityWide || false;
 
   // Extract timespans from extracted locations (pins/streets)
@@ -628,6 +631,7 @@ async function storeExtractedLocations(
       streets,
       cadastralProperties,
       busStops,
+      educationalFacilities,
       cityWide,
       timespanStart: validated.timespanStart,
       timespanEnd: validated.timespanEnd,
@@ -677,10 +681,13 @@ function ensureCrawledAtDate(crawledAt: Date | string | undefined): Date {
 /**
  * Perform geocoding on extracted locations
  */
-async function performGeocoding(extractedLocations: ExtractedLocations) {
+async function performGeocoding(
+  extractedLocations: ExtractedLocations,
+  ingestErrors?: IngestErrorRecorder,
+) {
   const { geocodeAddressesFromExtractedData } =
     await import("./geocode-addresses");
-  return await geocodeAddressesFromExtractedData(extractedLocations);
+  return await geocodeAddressesFromExtractedData(extractedLocations, ingestErrors);
 }
 
 /**
@@ -695,7 +702,7 @@ async function performGeocodingWithErrorHandling(
   geoJson: GeoJSONFeatureCollection | null;
 } | null> {
   try {
-    const geocodingResult = await performGeocoding(extractedLocations);
+    const geocodingResult = await performGeocoding(extractedLocations, ingestErrors);
     const filteredAddresses = await filterAndStoreAddresses(
       messageId,
       geocodingResult.addresses,
@@ -710,12 +717,22 @@ async function performGeocodingWithErrorHandling(
           )
         : undefined;
 
+    // Identify geocoded educational facilities for GeoJSON feature creation
+    const geocodedEducationalFacilities =
+      extractedLocations.educationalFacilities &&
+      extractedLocations.educationalFacilities.length > 0
+        ? filteredAddresses.filter((addr) =>
+            addr.originalText.startsWith(EDUCATIONAL_FACILITY_PREFIX),
+          )
+        : undefined;
+
     const geoJson = await convertToGeoJson(
       extractedLocations,
       geocodingResult.preGeocodedMap,
       geocodingResult.cadastralGeometries,
       geocodedBusStops,
       ingestErrors,
+      geocodedEducationalFacilities,
     );
 
     return { addresses: filteredAddresses, geoJson };
@@ -767,6 +784,7 @@ async function convertToGeoJson(
   cadastralGeometries: Map<string, CadastralGeometry> | undefined,
   geocodedBusStops?: Address[],
   ingestErrors?: IngestErrorRecorder,
+  geocodedEducationalFacilities?: Address[],
 ): Promise<GeoJSONFeatureCollection | null> {
   const { convertMessageGeocodingToGeoJson } =
     await import("./convert-to-geojson");
@@ -776,6 +794,7 @@ async function convertToGeoJson(
     cadastralGeometries,
     geocodedBusStops,
     ingestErrors,
+    geocodedEducationalFacilities,
   );
 }
 
