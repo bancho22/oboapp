@@ -57,9 +57,7 @@ export default function ApiAccessSection({
   const handleCopy = async () => {
     if (!apiClient?.apiKey) return;
     if (!navigator.clipboard?.writeText) {
-      alert(
-        "Копирането не се поддържа в този браузър. Копирай ключа ръчно.",
-      );
+      alert("Копирането не се поддържа в този браузър. Копирай ключа ръчно.");
       return;
     }
     try {
@@ -79,14 +77,14 @@ export default function ApiAccessSection({
       </h2>
       <p className="text-neutral text-sm mb-4">
         API ключът ви позволява достъп до публичните данни на OboApp от ваши
-        приложения. Вижте документацията на{" "}
+        приложения. Вижте{" "}
         <a
-          href="/api/v1/openapi"
+          href="https://api.oboapp.online/v1/docs"
           target="_blank"
           rel="noopener noreferrer"
           className="text-link underline"
         >
-          /api/v1/openapi
+          документацията
         </a>
         .
       </p>
@@ -172,9 +170,8 @@ export default function ApiAccessSection({
       ) : (
         <div className="space-y-3">
           <p className="text-sm text-neutral">
-            Нямаш активен API ключ. Предостави URL на проекта, в който
-            планираш да ползваш данните (уебсайт, GitHub repo,
-            приложение и др.).
+            Нямаш активен API ключ. Предостави URL на проекта, в който планираш
+            да ползваш данните (уебсайт, GitHub repo, приложение и др.).
           </p>
           <div>
             <input
