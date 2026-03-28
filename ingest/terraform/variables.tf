@@ -71,3 +71,8 @@ variable "ci_service_account_email" {
   description = "Email of the CI/CD service account that runs Terraform (needs workflows.admin to update workflow definitions)"
   type        = string
 }
+
+variable "gcs_readings_bucket" {
+  description = "GCS bucket name for raw air quality sensor readings"
+  type        = string
+}

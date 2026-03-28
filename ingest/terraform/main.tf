@@ -409,6 +409,11 @@ resource "google_cloud_run_v2_job" "crawlers" {
           name  = "LOCALITY"
           value = var.locality
         }
+        
+        env {
+          name  = "GCS_READINGS_BUCKET"
+          value = var.gcs_readings_bucket
+        }
       }
       
       max_retries = 1
@@ -1105,6 +1110,11 @@ resource "google_cloud_run_v2_job" "air_quality_fetch" {
         env {
           name  = "LOCALITY"
           value = var.locality
+        }
+
+        env {
+          name  = "GCS_READINGS_BUCKET"
+          value = var.gcs_readings_bucket
         }
       }
 

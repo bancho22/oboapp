@@ -3,9 +3,10 @@
 /**
  * Air quality fetch job.
  *
- * Standalone entry point that runs every 15 minutes via Cloud Scheduler.
+ * Standalone entry point that runs every 30 minutes via Cloud Scheduler.
  * Fetches raw PM2.5/PM10 readings from sensor.community API,
- * stores them in sensorCommunityReadings, and cleans up old data.
+ * stores them in a JSON file (GCS in production, local FS in development),
+ * and prunes readings older than the retention window.
  */
 
 import dotenv from "dotenv";
@@ -17,10 +18,8 @@ import { logger } from "@/lib/logger";
 import { getLocality } from "@/lib/target-locality";
 import { getBoundsForLocality } from "@oboapp/shared";
 import { parseSensorResponse } from "@/lib/air-quality/parse-sensor-response";
-import {
-  SENSOR_COMMUNITY_API_URL,
-  DATA_RETENTION_HOURS,
-} from "@/lib/air-quality/constants";
+import { SENSOR_COMMUNITY_API_URL } from "@/lib/air-quality/constants";
+import { createReadingsStore } from "@/lib/air-quality/readings-store";
 
 async function main() {
   const locality = getLocality();
@@ -43,51 +42,12 @@ async function main() {
   const readings = parseSensorResponse(apiData, locality);
   logger.info(`[air-quality-fetch] Parsed ${readings.length} valid readings`);
 
-  const { getDb } = await import("@/lib/db");
-  const db = await getDb();
-
-  let stored = 0;
-  let skipped = 0;
-
-  for (const reading of readings) {
-    const id = `${reading.sensorId}_${reading.timestamp.toISOString()}`;
-    try {
-      await db.sensorCommunityReadings.createOne(id, {
-        sensorId: reading.sensorId,
-        sensorType: reading.sensorType,
-        timestamp: reading.timestamp,
-        fetchedAt: new Date(),
-        lat: reading.lat,
-        lng: reading.lng,
-        p1: reading.p1,
-        p2: reading.p2,
-        locality,
-      });
-      stored++;
-    } catch (err) {
-      // Mongo adapter normalizes to "already-exists"; Firestore throws gRPC code 6
-      if (
-        err != null &&
-        typeof err === "object" &&
-        "code" in err &&
-        (err.code === "already-exists" || err.code === 6)
-      ) {
-        skipped++;
-      } else {
-        throw err;
-      }
-    }
-  }
-
-  // Clean up readings older than retention period
-  const cutoff = new Date(Date.now() - DATA_RETENTION_HOURS * 60 * 60 * 1000);
-  const cleaned = await db.sensorCommunityReadings.deleteOlderThan(cutoff);
+  const store = createReadingsStore();
+  const { stored, cleaned } = await store.appendAndPrune(locality, readings);
 
   logger.info(
-    `[air-quality-fetch] Done: ${stored} stored, ${skipped} skipped (dedup), ${cleaned} cleaned`,
+    `[air-quality-fetch] Done: ${stored} stored, ${cleaned} cleaned`,
   );
-
-  await db.close();
 }
 
 main().catch((err) => {

@@ -46,6 +46,7 @@
     "prebuilt:air-quality-fetch": "node dist/air-quality-fetch.js"
   },
   "dependencies": {
+    "@google-cloud/storage": "^7.19.0",
     "@google/genai": "^1.33.0",
     "@oboapp/db": "workspace:*",
     "@oboapp/shared": "workspace:*",

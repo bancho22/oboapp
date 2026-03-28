@@ -1,7 +1,7 @@
 /**
  * sensor-community crawler — emergent (30-min interval).
  *
- * Reads raw PM readings from sensorCommunityReadings (stored by the fetch job),
+ * Reads raw PM readings from the ReadingsStore (GCS in prod, local FS in dev),
  * groups them into ~4km grid cells, applies outlier filtering + NowCast AQI,
  * and triggers alerts when thresholds are breached.
  *
@@ -142,6 +142,9 @@ export async function crawl(): Promise<void> {
   const { getDb } = await import("@/lib/db");
   const db = await getDb();
 
+  const { createReadingsStore } = await import("@/lib/air-quality/readings-store");
+  const store = createReadingsStore();
+
   const now = new Date();
   const windowStart = new Date(
     now.getTime() - EVALUATION_WINDOW_HOURS * 60 * 60 * 1000,
@@ -150,13 +153,12 @@ export async function crawl(): Promise<void> {
     now.getTime() - HALF_WINDOW_HOURS * 60 * 60 * 1000,
   );
 
-  // Fetch all readings in the 4h evaluation window
-  const rawReadings =
-    await db.sensorCommunityReadings.findByLocalityAndTimeRange(
-      locality,
-      windowStart,
-      now,
-    );
+  // Fetch all readings in the 4h evaluation window from the store
+  const rawReadings = await store.getReadingsInRange(
+    locality,
+    windowStart,
+    now,
+  );
 
   logger.debug("Loaded readings", { sourceType: SOURCE_TYPE, count: rawReadings.length });
 
@@ -165,17 +167,10 @@ export async function crawl(): Promise<void> {
     return;
   }
 
-  // Group readings by grid cell
+  // Group readings by grid cell — ParsedReading fields match SensorReading
   const cellReadings = new Map<string, SensorReading[]>();
   for (const raw of rawReadings) {
-    const reading: SensorReading = {
-      sensorId: Number(raw.sensorId),
-      timestamp: new Date(String(raw.timestamp)),
-      lat: Number(raw.lat),
-      lng: Number(raw.lng),
-      p1: Number(raw.p1),
-      p2: Number(raw.p2),
-    };
+    const reading: SensorReading = { ...raw };
 
     const cell = assignToGridCell(grid, reading.lat, reading.lng);
     if (!cell) continue;
