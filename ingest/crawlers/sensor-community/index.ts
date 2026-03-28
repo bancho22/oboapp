@@ -134,7 +134,8 @@ export async function crawl(): Promise<void> {
   const bounds = getBoundsForLocality(locality);
   const grid = buildGrid(bounds);
 
-  logger.info(`[sensor-community] Starting crawl for ${locality}`, {
+  logger.info("Starting crawler", {
+    sourceType: SOURCE_TYPE,
     gridCells: grid.length,
   });
 
@@ -157,10 +158,10 @@ export async function crawl(): Promise<void> {
       now,
     );
 
-  logger.info(`[sensor-community] Loaded ${rawReadings.length} readings`);
+  logger.debug("Loaded readings", { sourceType: SOURCE_TYPE, count: rawReadings.length });
 
   if (rawReadings.length === 0) {
-    logger.info("[sensor-community] No readings found, skipping");
+    logger.debug("No readings found, skipping", { sourceType: SOURCE_TYPE });
     return;
   }
 
@@ -168,12 +169,12 @@ export async function crawl(): Promise<void> {
   const cellReadings = new Map<string, SensorReading[]>();
   for (const raw of rawReadings) {
     const reading: SensorReading = {
-      sensorId: raw.sensorId as number,
-      timestamp: new Date(raw.timestamp as string | number | Date),
-      lat: raw.lat as number,
-      lng: raw.lng as number,
-      p1: raw.p1 as number,
-      p2: raw.p2 as number,
+      sensorId: Number(raw.sensorId),
+      timestamp: new Date(String(raw.timestamp)),
+      lat: Number(raw.lat),
+      lng: Number(raw.lng),
+      p1: Number(raw.p1),
+      p2: Number(raw.p2),
     };
 
     const cell = assignToGridCell(grid, reading.lat, reading.lng);
@@ -184,9 +185,10 @@ export async function crawl(): Promise<void> {
     cellReadings.set(cell.id, existing);
   }
 
-  logger.info(
-    `[sensor-community] Readings distributed across ${cellReadings.size} grid cells`,
-  );
+  logger.debug("Readings distributed across grid cells", {
+    sourceType: SOURCE_TYPE,
+    cellCount: cellReadings.size,
+  });
 
   let saved = 0;
   let skipped = 0;
@@ -201,7 +203,12 @@ export async function crawl(): Promise<void> {
     // Blocker #3: Check sensor count AFTER filtering
     const sensorCount = countUniqueSensors(filtered);
     if (sensorCount < MIN_SENSORS_PER_CELL) {
-      logger.info(`[sensor-community] Cell ${cellId}: ${sensorCount} sensors after filtering (min ${MIN_SENSORS_PER_CELL}), skipping`);
+      logger.debug("Cell below sensor threshold, skipping", {
+        sourceType: SOURCE_TYPE,
+        cellId,
+        sensorCount,
+        minRequired: MIN_SENSORS_PER_CELL,
+      });
       continue;
     }
 
@@ -217,13 +224,23 @@ export async function crawl(): Promise<void> {
     const currentHourly = computeHourlyAverages(currentHalf);
     const expectedHours = HALF_WINDOW_HOURS;
     if (currentHourly.length / expectedHours < MIN_HOUR_COVERAGE) {
-      logger.info(
-        `[sensor-community] Cell ${cellId}: only ${currentHourly.length}/${expectedHours} hours with data, skipping`,
-      );
+      logger.debug("Cell below hour coverage, skipping", {
+        sourceType: SOURCE_TYPE,
+        cellId,
+        hours: currentHourly.length,
+        expectedHours,
+      });
       continue;
     }
 
     const currentAqi = calculateNowCastAqi(currentHourly);
+
+    // Compute previous half AQI once
+    const previousHourly = computeHourlyAverages(previousHalf);
+    const previousAqi =
+      previousHourly.length > 0
+        ? calculateNowCastAqi(previousHourly)
+        : 0;
 
     // Determine alert type
     let alertType: "immediate" | "sustained" | null = null;
@@ -232,22 +249,12 @@ export async function crawl(): Promise<void> {
       alertType = "immediate";
     } else if (currentAqi >= AQI_SUSTAINED_THRESHOLD) {
       // Need previous half to also exceed sustained threshold
-      const previousHourly = computeHourlyAverages(previousHalf);
-      if (previousHourly.length > 0) {
-        const previousAqi = calculateNowCastAqi(previousHourly);
-        if (previousAqi >= AQI_SUSTAINED_THRESHOLD) {
-          alertType = "sustained";
-        }
+      if (previousAqi >= AQI_SUSTAINED_THRESHOLD) {
+        alertType = "sustained";
       }
     }
 
     if (!alertType) continue;
-
-    const previousHourly = computeHourlyAverages(previousHalf);
-    const previousAqi =
-      previousHourly.length > 0
-        ? calculateNowCastAqi(previousHourly)
-        : 0;
     const { pm25: avgPm25, pm10: avgPm10 } = computeAverages(currentHalf);
 
     const evaluation: CellEvaluation = {
@@ -283,7 +290,9 @@ export async function crawl(): Promise<void> {
     try {
       const didSave = await saveSourceDocumentIfNew(doc, db);
       if (didSave) {
-        logger.info(`[sensor-community] Alert saved for cell ${cellId}`, {
+        logger.debug("Alert saved", {
+          sourceType: SOURCE_TYPE,
+          cellId,
           alertType,
           aqi: currentAqi,
           sensorCount,
@@ -293,13 +302,17 @@ export async function crawl(): Promise<void> {
         skipped++;
       }
     } catch (error) {
-      logger.error(`[sensor-community] Failed to save alert for cell ${cellId}`, {
+      logger.error("Failed to save alert", {
+        sourceType: SOURCE_TYPE,
+        cellId,
         error: error instanceof Error ? error.message : String(error),
       });
     }
   }
 
-  logger.info(
-    `[sensor-community] Done: ${saved} alerts saved, ${skipped} deduped`,
-  );
+  logger.info("Crawl complete", {
+    sourceType: SOURCE_TYPE,
+    saved,
+    skipped,
+  });
 }

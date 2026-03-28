@@ -100,7 +100,7 @@ export class SensorCommunityReadingsRepository {
       const ops: BatchOperation[] = chunk.map((doc) => ({
         type: "delete" as const,
         collection: SENSOR_COMMUNITY_READINGS_COLLECTION,
-        id: doc._id as string,
+        id: String(doc._id),
       }));
       await this.db.batchWrite(ops);
     }

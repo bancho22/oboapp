@@ -46,7 +46,7 @@ interface ApiSensorEntry {
 }
 
 function isApiEntry(val: unknown): val is ApiSensorEntry {
-  return val != null && typeof val === "object";
+  return val != null && typeof val === "object" && !Array.isArray(val);
 }
 
 /**
@@ -92,17 +92,15 @@ export function parseSensorResponse(
       else if (sdv.value_type === "P2") pm25 = value;
     }
 
-    // Must have at least one valid PM value
-    if (!Number.isFinite(pm10) && !Number.isFinite(pm25)) continue;
+    // Must have both valid PM values for reliable downstream aggregation
+    if (!Number.isFinite(pm10) || !Number.isFinite(pm25)) continue;
 
     // Apply hard cap
     if (pm10 > PM_HARD_CAP || pm25 > PM_HARD_CAP) continue;
 
     // Truncate per EPA spec: PM2.5 → 1 decimal, PM10 → integer
-    const p1 = Number.isFinite(pm10) ? Math.floor(pm10) : 0;
-    const p2 = Number.isFinite(pm25)
-      ? Math.floor(pm25 * 10) / 10
-      : 0;
+    const p1 = Math.floor(pm10);
+    const p2 = Math.floor(pm25 * 10) / 10;
 
     // sensor.community timestamps omit timezone — treat as UTC for deterministic parsing
     const ts = entry.timestamp;

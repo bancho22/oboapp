@@ -148,4 +148,25 @@ describe("parseSensorResponse", () => {
     const result = parseSensorResponse([entry], "bg.sofia");
     expect(result).toHaveLength(0);
   });
+
+  it("skips entries with only one PM value present", () => {
+    const entryOnlyP1 = {
+      ...makeSensorEntry(),
+      sensordatavalues: [{ value_type: "P1", value: "30" }],
+    };
+    const entryOnlyP2 = {
+      ...makeSensorEntry(),
+      sensordatavalues: [{ value_type: "P2", value: "15" }],
+    };
+    expect(parseSensorResponse([entryOnlyP1], "bg.sofia")).toHaveLength(0);
+    expect(parseSensorResponse([entryOnlyP2], "bg.sofia")).toHaveLength(0);
+  });
+
+  it("skips null and non-object entries in API data", () => {
+    const result = parseSensorResponse(
+      [null, undefined, 42, "string", [], makeSensorEntry()],
+      "bg.sofia",
+    );
+    expect(result).toHaveLength(1);
+  });
 });

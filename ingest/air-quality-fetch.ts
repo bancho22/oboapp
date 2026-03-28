@@ -91,6 +91,9 @@ async function main() {
 }
 
 main().catch((err) => {
-  logger.error("[air-quality-fetch] Fatal error:", err);
+  logger.error("[air-quality-fetch] Fatal error", {
+    error: err instanceof Error ? err.message : String(err),
+    stack: err instanceof Error ? err.stack : undefined,
+  });
   process.exit(1);
 });
